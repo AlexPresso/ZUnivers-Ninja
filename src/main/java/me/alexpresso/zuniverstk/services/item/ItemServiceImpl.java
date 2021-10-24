@@ -41,6 +41,10 @@ public class ItemServiceImpl implements ItemService {
 
     @Override
     public void updateFusions() {
+    }
+
+    @Override
+    public void updateFusions(final List<Item> items) {
         logger.debug("Updating fusions...");
         logger.debug("Updated fusions.");
     }

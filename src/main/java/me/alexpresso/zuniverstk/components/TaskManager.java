@@ -5,11 +5,15 @@ import me.alexpresso.zuniverstk.services.item.ItemService;
 import me.alexpresso.zuniverstk.services.user.UserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 @Component
 public class TaskManager {
+    @Value(value = "toolkit.discordTag")
+    private String discordTag;
+
     private final ItemService itemService;
     private final UserService userService;
     private final AdviceService adviceService;
@@ -34,9 +38,7 @@ public class TaskManager {
 
     @Scheduled(cron = "0 0/30 * ? * * *")
     public void inventoryTasks() {
-        final String discordTag = "";
-
-        this.userService.updateInventory(discordTag);
-        this.adviceService.adviseUser(discordTag);
+        this.userService.updateInventory(this.discordTag);
+        this.adviceService.adviseUser(this.discordTag);
     }
 }
