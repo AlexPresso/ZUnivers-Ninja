@@ -13,4 +13,6 @@ public interface ItemService {
     List<Fusion> getFusions();
 
     void updateFusions();
+
+    void updateFusions(List<Item> items);
 }
