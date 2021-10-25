@@ -9,9 +9,11 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+import java.io.IOException;
+
 @Component
 public class TaskManager {
-    @Value(value = "toolkit.discordTag")
+    @Value(value = "${toolkit.discordTag}")
     private String discordTag;
 
     private final ItemService itemService;
@@ -26,8 +28,8 @@ public class TaskManager {
         this.adviceService = as;
     }
 
-    @Scheduled(cron = "0 0 0/3 ? * * *")
-    public void updateLore() {
+    @Scheduled(fixedDelay = 30 * 60 * 1000)
+    public void updateLore() throws IOException, InterruptedException {
         logger.info("Updating lore...");
 
         this.itemService.updateItems();
@@ -36,7 +38,7 @@ public class TaskManager {
         logger.info("Done updating lore.");
     }
 
-    @Scheduled(cron = "0 0/30 * ? * * *")
+    @Scheduled(fixedDelay = 30 * 60 * 1000)
     public void inventoryTasks() {
         this.userService.updateInventory(this.discordTag);
         this.adviceService.adviseUser(this.discordTag);

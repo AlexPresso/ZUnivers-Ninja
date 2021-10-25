@@ -1,5 +1,6 @@
 package me.alexpresso.zuniverstk.domain.nodes.item;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import me.alexpresso.zuniverstk.domain.base.BaseGraphObject;
 import org.springframework.data.neo4j.core.schema.Node;
 import org.springframework.data.neo4j.core.schema.Relationship;
@@ -8,8 +9,8 @@ import java.util.Set;
 
 @Node
 public class Item extends BaseGraphObject {
+    @JsonProperty("identifier")
     private Long itemIdentifier;
-    private String itemId;
     private String name;
     private String genre;
     private int rarity;
@@ -28,15 +29,6 @@ public class Item extends BaseGraphObject {
 
     public Item setItemIdentifier(Long itemIdentifier) {
         this.itemIdentifier = itemIdentifier;
-        return this;
-    }
-
-    public String getItemId() {
-        return itemId;
-    }
-
-    public Item setItemId(String itemId) {
-        this.itemId = itemId;
         return this;
     }
 

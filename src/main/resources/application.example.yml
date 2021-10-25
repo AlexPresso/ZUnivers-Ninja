@@ -6,3 +6,7 @@ spring.neo4j:
 
 toolkit:
   discordTag: Alex'Presso#5480
+
+zunivers:
+  apiBaseUrl: zunivers-api.zerator.com
+  frontBaseUrl: zunivers.zerator.com
