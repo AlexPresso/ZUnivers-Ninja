@@ -8,19 +8,9 @@ import java.util.Set;
 
 @Node
 public class UserRank extends BaseGraphObject {
-    private String rankId;
     private String name;
     @Relationship(type = "USER_RANK", direction = Relationship.Direction.INCOMING)
     private Set<User> users;
-
-    public String getRankId() {
-        return rankId;
-    }
-
-    public UserRank setRankId(String rankId) {
-        this.rankId = rankId;
-        return this;
-    }
 
     public String getName() {
         return name;

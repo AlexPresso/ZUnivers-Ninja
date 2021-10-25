@@ -7,20 +7,10 @@ import org.springframework.data.neo4j.core.schema.TargetNode;
 
 @RelationshipProperties
 public class InventoryItem extends BaseGraphObject {
-    private String inventoryItemId;
     private boolean isGolden;
     private int quantity;
     @TargetNode
     private Item item;
-
-    public String getInventoryItemId() {
-        return inventoryItemId;
-    }
-
-    public InventoryItem setInventoryItemId(String inventoryItemId) {
-        this.inventoryItemId = inventoryItemId;
-        return this;
-    }
 
     public boolean isGolden() {
         return isGolden;

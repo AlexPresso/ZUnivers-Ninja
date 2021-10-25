@@ -9,7 +9,6 @@ import java.util.Set;
 
 @Node
 public class User extends BaseGraphObject {
-    private String userId;
     private String discordId;
     private String discordUserName;
     private int position;
@@ -22,15 +21,6 @@ public class User extends BaseGraphObject {
     private UserStatistics statistics;
     @Relationship(type = "INVENTORY_ITEM", direction = Relationship.Direction.OUTGOING)
     private Set<InventoryItem> inventory;
-
-    public String getUserId() {
-        return userId;
-    }
-
-    public User setUserId(String userId) {
-        this.userId = userId;
-        return this;
-    }
 
     public String getDiscordId() {
         return discordId;
