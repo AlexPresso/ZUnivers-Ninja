@@ -2,6 +2,8 @@ package me.alexpresso.zuniverstk.services.request;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -14,11 +16,13 @@ import java.time.Duration;
 
 @Service
 public class RequestServiceImpl implements RequestService {
+
+    private final static Logger logger = LoggerFactory.getLogger(RequestServiceImpl.class);
+    private final ObjectMapper mapper;
     @Value(value = "${zunivers.apiBaseUrl}")
     private String apiBaseUrl;
     @Value(value = "${zunivers.frontBaseUrl}")
     private String frontBaseUrl;
-    private final ObjectMapper mapper;
 
     public RequestServiceImpl() {
         this.mapper = new ObjectMapper();
@@ -26,6 +30,8 @@ public class RequestServiceImpl implements RequestService {
 
     @Override
     public Object request(final String uri, final String method, final Object data, final TypeReference<?> type) throws IOException, InterruptedException {
+        logger.debug("Requesting {} - {}", method, uri);
+
         final HttpRequest.Builder builder = HttpRequest.newBuilder()
             .version(HttpClient.Version.HTTP_2)
             .timeout(Duration.ofMinutes(1))

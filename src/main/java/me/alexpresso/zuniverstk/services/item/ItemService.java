@@ -5,19 +5,18 @@ import me.alexpresso.zuniverstk.domain.nodes.item.Item;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 public interface ItemService {
     List<Item> fetchItems() throws IOException, InterruptedException;
 
     List<Item> getItems();
 
-    void updateItems() throws IOException, InterruptedException;
+    Map<String, Item> updateItems() throws IOException, InterruptedException;
 
     List<Fusion> fetchFusions() throws IOException, InterruptedException;
 
     List<Fusion> getFusions();
 
-    void updateFusions() throws IOException, InterruptedException;
-
-    void updateFusions(List<Item> items);
+    void updateFusions(Map<String, Item> items) throws IOException, InterruptedException;
 }

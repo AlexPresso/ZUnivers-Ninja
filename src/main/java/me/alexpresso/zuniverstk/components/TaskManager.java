@@ -13,14 +13,12 @@ import java.io.IOException;
 
 @Component
 public class TaskManager {
-    @Value(value = "${toolkit.discordTag}")
-    private String discordTag;
-
+    private static final Logger logger = LoggerFactory.getLogger(TaskManager.class);
     private final ItemService itemService;
     private final UserService userService;
     private final AdviceService adviceService;
-
-    private static final Logger logger = LoggerFactory.getLogger(TaskManager.class);
+    @Value(value = "${toolkit.discordTag}")
+    private String discordTag;
 
     public TaskManager(final ItemService is, final UserService us, final AdviceService as) {
         this.itemService = is;
@@ -32,8 +30,8 @@ public class TaskManager {
     public void updateLore() throws IOException, InterruptedException {
         logger.info("Updating lore...");
 
-        this.itemService.updateItems();
-        this.itemService.updateFusions();
+        final var items = this.itemService.updateItems();
+        this.itemService.updateFusions(items);
 
         logger.info("Done updating lore.");
     }
