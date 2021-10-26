@@ -34,6 +34,8 @@ public class AdviceServiceImpl implements AdviceService {
             .filter(s -> s.getDoability() >= 100)
             .collect(Collectors.toSet());
 
+        //TODO
+
         logger.debug("Done advising {}.", discordTag);
     }
 }
