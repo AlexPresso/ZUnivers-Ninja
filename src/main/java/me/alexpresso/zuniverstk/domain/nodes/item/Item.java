@@ -5,6 +5,7 @@ import me.alexpresso.zuniverstk.domain.base.BaseGraphObject;
 import org.springframework.data.neo4j.core.schema.Node;
 import org.springframework.data.neo4j.core.schema.Relationship;
 
+import java.util.HashSet;
 import java.util.Set;
 
 @Node
@@ -19,14 +20,14 @@ public class Item extends BaseGraphObject {
     @Relationship(type = "HOLDS", direction = Relationship.Direction.INCOMING)
     private Pack pack;
     @Relationship(type = "FUSION_INPUT", direction = Relationship.Direction.OUTGOING)
-    private Set<Fusion> inputOfFusions;
+    private Set<Fusion> inputOfFusions = new HashSet<>();
     @Relationship(type = "FUSION_RESULT", direction = Relationship.Direction.INCOMING)
-    private Set<Fusion> resultOfFusions;
+    private Set<Fusion> resultOfFusions = new HashSet<>();
+
 
     public Long getItemIdentifier() {
         return itemIdentifier;
     }
-
     public Item setItemIdentifier(Long itemIdentifier) {
         this.itemIdentifier = itemIdentifier;
         return this;
@@ -35,7 +36,6 @@ public class Item extends BaseGraphObject {
     public String getName() {
         return name;
     }
-
     public Item setName(String name) {
         this.name = name;
         return this;
@@ -44,7 +44,6 @@ public class Item extends BaseGraphObject {
     public String getGenre() {
         return genre;
     }
-
     public Item setGenre(String genre) {
         this.genre = genre;
         return this;
@@ -53,7 +52,6 @@ public class Item extends BaseGraphObject {
     public int getRarity() {
         return rarity;
     }
-
     public Item setRarity(int rarity) {
         this.rarity = rarity;
         return this;
@@ -62,7 +60,6 @@ public class Item extends BaseGraphObject {
     public String getSlug() {
         return slug;
     }
-
     public Item setSlug(String slug) {
         this.slug = slug;
         return this;
@@ -71,7 +68,6 @@ public class Item extends BaseGraphObject {
     public Set<String> getUrls() {
         return urls;
     }
-
     public Item setUrls(Set<String> urls) {
         this.urls = urls;
         return this;
@@ -80,7 +76,6 @@ public class Item extends BaseGraphObject {
     public Pack getPack() {
         return pack;
     }
-
     public Item setPack(Pack pack) {
         this.pack = pack;
         return this;
@@ -89,7 +84,6 @@ public class Item extends BaseGraphObject {
     public Set<Fusion> getInputOfFusions() {
         return inputOfFusions;
     }
-
     public Item setInputOfFusions(Set<Fusion> inputOfFusions) {
         this.inputOfFusions = inputOfFusions;
         return this;
@@ -98,7 +92,6 @@ public class Item extends BaseGraphObject {
     public Set<Fusion> getResultOfFusions() {
         return resultOfFusions;
     }
-
     public Item setResultOfFusions(Set<Fusion> resultOfFusions) {
         this.resultOfFusions = resultOfFusions;
         return this;

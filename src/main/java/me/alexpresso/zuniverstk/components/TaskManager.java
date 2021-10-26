@@ -13,18 +13,23 @@ import java.io.IOException;
 
 @Component
 public class TaskManager {
+
     private static final Logger logger = LoggerFactory.getLogger(TaskManager.class);
+
     private final ItemService itemService;
     private final UserService userService;
     private final AdviceService adviceService;
+
     @Value(value = "${toolkit.discordTag}")
     private String discordTag;
+
 
     public TaskManager(final ItemService is, final UserService us, final AdviceService as) {
         this.itemService = is;
         this.userService = us;
         this.adviceService = as;
     }
+
 
     @Scheduled(fixedDelay = 30 * 60 * 1000)
     public void updateLore() throws IOException, InterruptedException {
@@ -37,8 +42,8 @@ public class TaskManager {
     }
 
     @Scheduled(fixedDelay = 30 * 60 * 1000)
-    public void inventoryTasks() {
-        this.userService.updateInventory(this.discordTag);
+    public void inventoryTasks() throws IOException, InterruptedException {
+        this.userService.updateUserAndInventory(this.discordTag);
         this.adviceService.adviseUser(this.discordTag);
     }
 }

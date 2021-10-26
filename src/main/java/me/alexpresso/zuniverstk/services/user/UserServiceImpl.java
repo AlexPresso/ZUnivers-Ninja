@@ -1,35 +1,92 @@
 package me.alexpresso.zuniverstk.services.user;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import me.alexpresso.zuniverstk.domain.nodes.item.Item;
 import me.alexpresso.zuniverstk.domain.nodes.user.User;
+import me.alexpresso.zuniverstk.domain.nodes.user.UserStatistics;
+import me.alexpresso.zuniverstk.domain.relations.InventoryItem;
 import me.alexpresso.zuniverstk.repositories.UserRepository;
+import me.alexpresso.zuniverstk.repositories.UserStatisticsRepository;
+import me.alexpresso.zuniverstk.services.item.ItemService;
 import me.alexpresso.zuniverstk.services.request.RequestService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Optional;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 public class UserServiceImpl implements UserService {
 
-    private final UserRepository userRepository;
-    private final RequestService requestService;
-
     private static final Logger logger = LoggerFactory.getLogger(UserServiceImpl.class);
 
-    public UserServiceImpl(final UserRepository ur, final RequestService rs) {
+    private final UserRepository userRepository;
+    private final UserStatisticsRepository userStatsRepository;
+    private final RequestService requestService;
+    private final ItemService itemService;
+
+
+    public UserServiceImpl(final UserRepository ur, final UserStatisticsRepository ussr, final RequestService rs, final ItemService is) {
         this.userRepository = ur;
+        this.userStatsRepository = ussr;
         this.requestService = rs;
+        this.itemService = is;
+    }
+
+
+    @Override
+    public UserStatistics fetchUserStatistics(final String discordTag) throws IOException, InterruptedException {
+        return (UserStatistics) this.requestService.request(
+            String.format("/public/user/%s", URLEncoder.encode(discordTag, StandardCharsets.UTF_8)),
+            "GET",
+            new TypeReference<UserStatistics>() {}
+        );
+    }
+
+    @Override
+    public List<InventoryItem> fetchUserInventory(final String discordTag) throws IOException, InterruptedException {
+        return (List<InventoryItem>) this.requestService.request(
+            String.format("/public/inventory/%s", URLEncoder.encode(discordTag, StandardCharsets.UTF_8)),
+            "GET",
+            new TypeReference<List<InventoryItem>>() {}
+        );
     }
 
     @Override
     public Optional<User> getUser(final String discordTag) {
-        return this.userRepository.findUserByDiscordUserName(discordTag);
+        return this.userRepository.findByDiscordUserName(discordTag);
     }
 
     @Override
-    public void updateInventory(final String discordTag) {
+    public void updateUserAndInventory(final String discordTag) throws IOException, InterruptedException {
         logger.debug("Updating {}'s inventory...", discordTag);
+
+        final var statistics = this.fetchUserStatistics(discordTag);
+        final var inventory = this.fetchUserInventory(discordTag);
+        final var items = this.itemService.getItems().stream()
+            .collect(Collectors.toMap(Item::getId, Function.identity()));
+        final var user = this.getUser(discordTag)
+            .orElseGet(() -> this.userStatsRepository.save(statistics).getUser());
+        final var userInventory = user.getInventory().stream()
+            .collect(Collectors.toMap(InventoryItem::getId, Function.identity()));
+
+        user.setStatistics(statistics)
+            .getInventory().clear();
+
+        inventory.forEach(in -> user.getInventory().add(userInventory.getOrDefault(in.getId(), in)
+            .setQuantity(in.getQuantity())
+            .setGolden(in.isGolden())
+            .setItem(items.get(in.getItem().getId()))
+        ));
+
+        this.userRepository.save(user);
+
         logger.debug("Updated {}'s inventory.", discordTag);
     }
 }

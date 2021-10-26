@@ -40,7 +40,7 @@ public class ItemServiceImpl implements ItemService {
 
     @Override
     public List<Item> fetchItems() throws IOException, InterruptedException {
-        return (List<Item>) this.requestService.request("/public/item", "GET", null, new TypeReference<List<Item>>() {});
+        return (List<Item>) this.requestService.request("/public/item", "GET", new TypeReference<List<Item>>() {});
     }
 
     @Override
@@ -78,7 +78,7 @@ public class ItemServiceImpl implements ItemService {
 
     @Override
     public List<Fusion> fetchFusions() throws IOException, InterruptedException {
-        return (List<Fusion>) this.requestService.request("/public/fusion", "GET", null, new TypeReference<List<Fusion>>() {});
+        return (List<Fusion>) this.requestService.request("/public/fusion", "GET", new TypeReference<List<Fusion>>() {});
     }
 
     @Override

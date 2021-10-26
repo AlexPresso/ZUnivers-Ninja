@@ -18,15 +18,19 @@ import java.time.Duration;
 public class RequestServiceImpl implements RequestService {
 
     private final static Logger logger = LoggerFactory.getLogger(RequestServiceImpl.class);
+
     private final ObjectMapper mapper;
+
     @Value(value = "${zunivers.apiBaseUrl}")
     private String apiBaseUrl;
     @Value(value = "${zunivers.frontBaseUrl}")
     private String frontBaseUrl;
 
+
     public RequestServiceImpl() {
         this.mapper = new ObjectMapper();
     }
+
 
     @Override
     public Object request(final String uri, final String method, final Object data, final TypeReference<?> type) throws IOException, InterruptedException {
