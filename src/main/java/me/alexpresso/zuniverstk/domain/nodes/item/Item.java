@@ -2,6 +2,7 @@ package me.alexpresso.zuniverstk.domain.nodes.item;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import me.alexpresso.zuniverstk.domain.base.BaseGraphObject;
+import me.alexpresso.zuniverstk.domain.relations.InventoryItem;
 import org.springframework.data.neo4j.core.schema.Node;
 import org.springframework.data.neo4j.core.schema.Relationship;
 
@@ -23,6 +24,8 @@ public class Item extends BaseGraphObject {
     private Set<Fusion> inputOfFusions = new HashSet<>();
     @Relationship(type = "FUSION_RESULT", direction = Relationship.Direction.INCOMING)
     private Set<Fusion> resultOfFusions = new HashSet<>();
+    @Relationship(type = "INVENTORY_ITEM", direction = Relationship.Direction.INCOMING)
+    private Set<InventoryItem> inventories = new HashSet<>();
 
 
     public Long getItemIdentifier() {
@@ -95,5 +98,9 @@ public class Item extends BaseGraphObject {
     public Item setResultOfFusions(Set<Fusion> resultOfFusions) {
         this.resultOfFusions = resultOfFusions;
         return this;
+    }
+
+    public Set<InventoryItem> getInventories() {
+        return this.inventories;
     }
 }
