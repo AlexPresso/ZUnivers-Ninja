@@ -1,12 +1,12 @@
-package me.alexpresso.zuniverstk.classes;
+package me.alexpresso.zuniverstk.classes.projection;
 
 import me.alexpresso.zuniverstk.domain.nodes.item.Item;
 import me.alexpresso.zuniverstk.domain.relations.InventoryItem;
 
-public class ItemProjection {
+public class ItemProjection implements ActionElement {
     private final Item item;
     private final boolean golden;
-    private final int quantity;
+    private int quantity;
 
 
     public ItemProjection(final InventoryItem iv) {
@@ -29,5 +29,16 @@ public class ItemProjection {
 
     public int getQuantity() {
         return quantity;
+    }
+    public void consumeOne() {
+        this.quantity--;
+    }
+    public void produceOne() {
+        this.quantity++;
+    }
+
+    @Override
+    public String getIdentifier() {
+        return this.item.getItemIdentifier().toString();
     }
 }
