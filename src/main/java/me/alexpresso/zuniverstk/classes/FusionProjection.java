@@ -4,33 +4,46 @@ import me.alexpresso.zuniverstk.domain.nodes.item.Fusion;
 import me.alexpresso.zuniverstk.domain.nodes.item.Item;
 import me.alexpresso.zuniverstk.domain.relations.InventoryItem;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
-public class FusionState {
+public class FusionProjection {
     private final Fusion fusion;
     private final Map<Item, Integer> possessedItems; //Item, quantity
     private final Map<Item, Integer> missingItems;
-    private double cost;
+    private final boolean golden;
+    private final List<Action> actions;
+    private int profit;
 
 
-    public FusionState(final Fusion fusion) {
+    public FusionProjection(final Fusion fusion, final boolean golden) {
         this.fusion = fusion;
         this.possessedItems = new HashMap<>();
         this.missingItems = new HashMap<>();
-        this.cost = 0;
+        this.golden = golden;
+        this.actions = new ArrayList<>();
+        this.profit = 0;
+
+        this.calculateProfit();
+        this.refreshState();
     }
 
 
-    public FusionState refreshState() {
-        return this.refreshState(false);
+    private void calculateProfit() {
+        final var inputsSum = this.fusion.getInputs().stream()
+            .map(Item::getRarityMetadata)
+            .map(r -> this.golden ? r.getGoldenPoints() : r.getBasePoints())
+            .reduce(0, Integer::sum);
+
+        this.profit = inputsSum + this.fusion.getResult().getRarityMetadata().getBonus();
     }
-    public FusionState refreshState(final boolean includeGolden) {
+
+    private FusionProjection refreshState() {
         fusion.getInputs().forEach(in -> {
-            this.cost += in.getRarity();
-
             var s = in.getInventories().stream();
-            if(! includeGolden)
+            if(this.golden)
                 s = s.filter(InventoryItem::isGolden);
 
             final var quantity = s.map(InventoryItem::getQuantity)
@@ -57,11 +70,7 @@ public class FusionState {
 
 
     public double getProfit() {
-        return this.fusion.getResult().getRarity() - this.cost; //TODO: deduct real card score
-    }
-
-    public double getCost() {
-        return this.cost; //TODO: deduct real card score
+        return this.profit;
     }
 
     public double getDoability() {

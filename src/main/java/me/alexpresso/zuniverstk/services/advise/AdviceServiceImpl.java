@@ -1,6 +1,6 @@
 package me.alexpresso.zuniverstk.services.advise;
 
-import me.alexpresso.zuniverstk.classes.FusionState;
+import me.alexpresso.zuniverstk.classes.FusionProjection;
 import me.alexpresso.zuniverstk.repositories.FusionRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,7 +27,7 @@ public class AdviceServiceImpl implements AdviceService {
         logger.debug("Checking for doable fusions...");
 
         final var fusions = this.fusionRepository.findAllFusionsWithUserInv(discordTag).stream()
-            .map(f -> new FusionState(f).refreshState(true))
+            .map(f -> new FusionProjection(f, false))
             .collect(Collectors.toSet());
 
         final var doables = fusions.stream()
