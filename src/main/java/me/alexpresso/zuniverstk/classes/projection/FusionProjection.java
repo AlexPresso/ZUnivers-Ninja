@@ -1,11 +1,12 @@
-package me.alexpresso.zuniverstk.classes;
+package me.alexpresso.zuniverstk.classes.projection;
 
 import me.alexpresso.zuniverstk.domain.nodes.item.Fusion;
 import me.alexpresso.zuniverstk.domain.nodes.item.Item;
+import me.alexpresso.zuniverstk.exceptions.ProjectionException;
 
 import java.util.*;
 
-public class FusionProjection {
+public class FusionProjection implements ActionElement {
     private final Fusion fusion;
     private final Set<Item> possessedItems;
     private final Set<Item> missingItems;
@@ -38,7 +39,20 @@ public class FusionProjection {
         this.profit = inputsSum + this.fusion.getResult().getRarityMetadata().getBonus();
     }
 
-    private FusionProjection refreshState() {
+
+    public Fusion getFusion() {
+        return this.fusion;
+    }
+
+    public Map<String, ItemProjection> getSharedInventory() {
+        return this.sharedInventory;
+    }
+
+    public boolean isGolden() {
+        return this.golden;
+    }
+
+    public void refreshState() {
         fusion.getInputs().forEach(in -> {
             if(this.sharedInventory.containsKey(in.getId())) {
                 if(this.sharedInventory.get(in.getId()).getQuantity() > 0) {
@@ -49,8 +63,23 @@ public class FusionProjection {
 
             this.missingItems.add(in);
         });
+    }
 
-        return this;
+    public void consumeInputs() throws ProjectionException {
+        final var projections = new HashSet<ItemProjection>();
+
+        for(var item : this.possessedItems) {
+            if(!this.sharedInventory.containsKey(item.getId()))
+                throw new ProjectionException("No no no, you have no inventory entry for that item.");
+
+            final var iProjection = this.sharedInventory.get(item.getId());
+            if(iProjection.getQuantity() <= 0)
+                throw new ProjectionException("No no no, you don't own that item.");
+
+            projections.add(iProjection);
+        }
+
+        projections.forEach(ItemProjection::consumeOne);
     }
 
     public Set<Item> getPossessedItems() {
@@ -67,5 +96,10 @@ public class FusionProjection {
 
     public double getDoability() {
         return (this.possessedItems.size() * 100D) / this.fusion.getInputs().size();
+    }
+
+    @Override
+    public String getIdentifier() {
+        return String.format("%s%s", this.golden ? "+" : "", this.fusion.getResult().getItemIdentifier());
     }
 }

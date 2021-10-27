@@ -1,4 +1,4 @@
-package me.alexpresso.zuniverstk.classes;
+package me.alexpresso.zuniverstk.classes.projection;
 
 public enum ActionType {
     RECYCLE("recyclage"),
