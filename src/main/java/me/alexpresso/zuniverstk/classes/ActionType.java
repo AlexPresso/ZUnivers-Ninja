@@ -1,6 +1,18 @@
 package me.alexpresso.zuniverstk.classes;
 
 public enum ActionType {
-    CRAFT_CARD,
+    RECYCLE("recyclage"),
+    CRAFT("creation"),
+    ENCHANT("enchantment"),
+    FUSION("fusion");
 
+    private final String command;
+
+    ActionType(final String command) {
+        this.command = command;
+    }
+
+    public String getCommand() {
+        return this.command;
+    }
 }

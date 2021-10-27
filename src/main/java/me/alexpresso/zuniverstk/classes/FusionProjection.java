@@ -2,29 +2,27 @@ package me.alexpresso.zuniverstk.classes;
 
 import me.alexpresso.zuniverstk.domain.nodes.item.Fusion;
 import me.alexpresso.zuniverstk.domain.nodes.item.Item;
-import me.alexpresso.zuniverstk.domain.relations.InventoryItem;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class FusionProjection {
     private final Fusion fusion;
-    private final Map<Item, Integer> possessedItems; //Item, quantity
-    private final Map<Item, Integer> missingItems;
-    private final boolean golden;
+    private final Set<Item> possessedItems;
+    private final Set<Item> missingItems;
     private final List<Action> actions;
+    private final boolean golden;
     private int profit;
+    private Map<String, ItemProjection> sharedInventory;
 
 
-    public FusionProjection(final Fusion fusion, final boolean golden) {
+    public FusionProjection(final Fusion fusion, final boolean golden, final Map<String, ItemProjection> sharedInventory) {
         this.fusion = fusion;
-        this.possessedItems = new HashMap<>();
-        this.missingItems = new HashMap<>();
-        this.golden = golden;
+        this.possessedItems = new HashSet<>();
+        this.missingItems = new HashSet<>();
         this.actions = new ArrayList<>();
         this.profit = 0;
+        this.golden = golden;
+        this.sharedInventory = sharedInventory;
 
         this.calculateProfit();
         this.refreshState();
@@ -42,41 +40,32 @@ public class FusionProjection {
 
     private FusionProjection refreshState() {
         fusion.getInputs().forEach(in -> {
-            var s = in.getInventories().stream();
-            if(this.golden)
-                s = s.filter(InventoryItem::isGolden);
-
-            final var quantity = s.map(InventoryItem::getQuantity)
-                .reduce(0, Integer::sum);
-
-            if(quantity == 0) {
-                missingItems.put(in, 1);
-                return;
+            if(this.sharedInventory.containsKey(in.getId())) {
+                if(this.sharedInventory.get(in.getId()).getQuantity() > 0) {
+                    this.possessedItems.add(in);
+                    return;
+                }
             }
 
-            this.possessedItems.put(in, this.possessedItems.getOrDefault(in, 0) + quantity);
+            this.missingItems.add(in);
         });
 
         return this;
     }
 
-    public Map<Item, Integer> getPossessedItems() {
+    public Set<Item> getPossessedItems() {
         return this.possessedItems;
     }
 
-    public Map<Item, Integer> getMissingItems() {
+    public Set<Item> getMissingItems() {
         return this.missingItems;
     }
-
 
     public double getProfit() {
         return this.profit;
     }
 
     public double getDoability() {
-        final var quantities = this.possessedItems.values().stream()
-            .reduce(0, Integer::sum);
-
-        return (quantities * 100D) / this.fusion.getInputs().size();
+        return (this.possessedItems.size() * 100D) / this.fusion.getInputs().size();
     }
 }

@@ -1,5 +1,6 @@
 package me.alexpresso.zuniverstk.components;
 
+import me.alexpresso.zuniverstk.exceptions.NodeNotFoundException;
 import me.alexpresso.zuniverstk.services.advise.AdviceService;
 import me.alexpresso.zuniverstk.services.item.ItemService;
 import me.alexpresso.zuniverstk.services.user.UserService;
@@ -42,7 +43,7 @@ public class TaskManager {
     }
 
     @Scheduled(fixedDelay = 30 * 60 * 1000)
-    public void inventoryTasks() throws IOException, InterruptedException {
+    public void inventoryTasks() throws IOException, InterruptedException, NodeNotFoundException {
         this.userService.updateUserAndInventory(this.discordTag);
         this.adviceService.adviseUser(this.discordTag);
     }
