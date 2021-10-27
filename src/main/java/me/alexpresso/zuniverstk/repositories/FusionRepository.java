@@ -10,7 +10,7 @@ public interface FusionRepository extends Neo4jRepository<Fusion, Long> {
     @Query(
         "MATCH (i:Item)-[r:FUSION_INPUT|FUSION_RESULT]-(f:Fusion) " +
         "OPTIONAL MATCH (u:User{discordUserName: $0})-[iv:INVENTORY_ITEM]->(i) " +
-        "RETURN i, r, f, u, iv"
+        "RETURN *"
     )
     Set<Fusion> findAllFusionsWithUserInv(String discordUserName);
 }

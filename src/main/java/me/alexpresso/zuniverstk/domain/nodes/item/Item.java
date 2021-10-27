@@ -1,6 +1,7 @@
 package me.alexpresso.zuniverstk.domain.nodes.item;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import me.alexpresso.zuniverstk.classes.RarityMetadata;
 import me.alexpresso.zuniverstk.domain.base.BaseGraphObject;
 import me.alexpresso.zuniverstk.domain.relations.InventoryItem;
 import org.springframework.data.neo4j.core.schema.Node;
@@ -53,11 +54,16 @@ public class Item extends BaseGraphObject {
     }
 
     public int getRarity() {
-        return rarity;
+        return this.rarity;
     }
+
     public Item setRarity(int rarity) {
         this.rarity = rarity;
         return this;
+    }
+
+    public RarityMetadata getRarityMetadata() {
+        return RarityMetadata.of(rarity);
     }
 
     public String getSlug() {
