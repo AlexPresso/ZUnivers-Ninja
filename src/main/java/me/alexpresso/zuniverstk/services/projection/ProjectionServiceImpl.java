@@ -74,8 +74,8 @@ public class ProjectionServiceImpl implements ProjectionService {
         }
 
         projections.get().stream()
-            .filter(p -> !p.isSolved())
-            .sorted(Comparator.comparingDouble(FusionProjection::getProfit).reversed())
+            .filter(p -> !p.isSolved() && !inventory.containsKey(p.getFusion().getResult().getId()))
+            .sorted(Comparator.comparingDouble(FusionProjection::getDoability).reversed())
             .forEach(p -> {
                 if(p.getMissingItems().isEmpty())
                     this.solvedFusion(actions, p);
@@ -103,7 +103,10 @@ public class ProjectionServiceImpl implements ProjectionService {
                 projection.getPossessedItems().put(i, q);
                 this.produceItem(projection.getSharedInventory(), i, projection.isGolden(), q);
 
-                actions.addElement(new Action(ActionType.CRAFT, i), q);
+                actions.addElement(ActionType.CRAFT, i, q);
+                if(projection.isGolden()) {
+                    actions.addElement(ActionType.ENCHANT, i ,q);
+                }
             });
 
             projection.getMissingItems().clear();

@@ -26,9 +26,9 @@ public class ActionList extends ArrayList<Action> {
         this.changed = true;
     }
 
-    public void addElement(final Action action, final int count) {
+    public void addElement(final ActionType type, final ActionElement element, final int count) {
         for(var i = 0; i < count; i++) {
-            this.addElement(action);
+            this.addElement(new Action(type, element));
         }
     }
 }
