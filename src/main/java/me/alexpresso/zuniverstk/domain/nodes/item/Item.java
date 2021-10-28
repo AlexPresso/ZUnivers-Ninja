@@ -1,7 +1,9 @@
 package me.alexpresso.zuniverstk.domain.nodes.item;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import me.alexpresso.zuniverstk.classes.RarityMetadata;
+import me.alexpresso.zuniverstk.classes.projection.ActionElement;
 import me.alexpresso.zuniverstk.domain.base.BaseGraphObject;
 import me.alexpresso.zuniverstk.domain.relations.InventoryItem;
 import org.springframework.data.neo4j.core.schema.Node;
@@ -11,7 +13,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 @Node
-public class Item extends BaseGraphObject {
+public class Item extends BaseGraphObject implements ActionElement {
     @JsonProperty("identifier")
     private Long itemIdentifier;
     private String name;
@@ -108,5 +110,11 @@ public class Item extends BaseGraphObject {
 
     public Set<InventoryItem> getInventories() {
         return this.inventories;
+    }
+
+    @Override
+    @JsonIgnore
+    public String getIdentifier() {
+        return this.itemIdentifier.toString();
     }
 }

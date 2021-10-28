@@ -4,26 +4,28 @@ import me.alexpresso.zuniverstk.domain.nodes.item.Fusion;
 import me.alexpresso.zuniverstk.domain.nodes.item.Item;
 import me.alexpresso.zuniverstk.exceptions.ProjectionException;
 
-import java.util.*;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
 public class FusionProjection implements ActionElement {
     private final Fusion fusion;
     private final Set<Item> possessedItems;
     private final Set<Item> missingItems;
-    private final List<Action> actions;
     private final boolean golden;
+    private final Map<String, ItemProjection> sharedInventory;
     private int profit;
-    private Map<String, ItemProjection> sharedInventory;
+    private boolean solved;
 
 
     public FusionProjection(final Fusion fusion, final boolean golden, final Map<String, ItemProjection> sharedInventory) {
         this.fusion = fusion;
         this.possessedItems = new HashSet<>();
         this.missingItems = new HashSet<>();
-        this.actions = new ArrayList<>();
         this.profit = 0;
         this.golden = golden;
         this.sharedInventory = sharedInventory;
+        this.solved = false;
 
         this.calculateProfit();
         this.refreshState();
@@ -65,7 +67,7 @@ public class FusionProjection implements ActionElement {
         });
     }
 
-    public void consumeInputs() throws ProjectionException {
+    public FusionProjection consumeInputs() throws ProjectionException {
         final var projections = new HashSet<ItemProjection>();
 
         for(var item : this.possessedItems) {
@@ -80,6 +82,7 @@ public class FusionProjection implements ActionElement {
         }
 
         projections.forEach(ItemProjection::consumeOne);
+        return this;
     }
 
     public Set<Item> getPossessedItems() {
@@ -96,6 +99,15 @@ public class FusionProjection implements ActionElement {
 
     public double getDoability() {
         return (this.possessedItems.size() * 100D) / this.fusion.getInputs().size();
+    }
+
+    public boolean isSolved() {
+        return this.solved;
+    }
+
+    public FusionProjection setSolved(final boolean solved) {
+        this.solved = solved;
+        return this;
     }
 
     @Override
