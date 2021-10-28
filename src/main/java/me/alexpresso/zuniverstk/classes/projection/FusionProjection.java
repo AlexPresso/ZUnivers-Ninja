@@ -65,7 +65,7 @@ public class FusionProjection implements ActionElement {
                 }
             }
 
-            this.missingItems.put(in.getItem(), this.missingItems.getOrDefault(in.getItem(), 0) + 1);
+            this.missingItems.put(in.getItem(), this.missingItems.getOrDefault(in.getItem(), in.getQuantity()));
         });
     }
 
