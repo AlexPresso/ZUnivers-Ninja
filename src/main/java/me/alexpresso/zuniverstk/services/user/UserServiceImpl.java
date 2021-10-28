@@ -77,6 +77,10 @@ public class UserServiceImpl implements UserService {
             .collect(Collectors.toMap(InventoryItem::getId, Function.identity()));
 
         user.setStatistics(statistics)
+            .setLoreDust(statistics.getUser().getLoreDust())
+            .setBalance(statistics.getUser().getBalance())
+            .setScore(statistics.getUser().getScore())
+            .setPosition(statistics.getUser().getPosition())
             .getInventory().clear();
 
         inventory.forEach(in -> user.getInventory().add(userInventory.getOrDefault(in.getId(), in)
