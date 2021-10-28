@@ -54,18 +54,27 @@ public class FusionProjection implements ActionElement {
     }
 
     public void refreshState() {
-        fusion.getInputs().forEach(in -> {
+        this.fusion.getInputs().forEach(in -> {
+            var possessedCount = 0;
+
             if(this.sharedInventory.containsKey(in.getItem().getId())) {
-                if(this.sharedInventory.get(in.getItem().getId()).getQuantity() > 0) {
+                final var item = this.sharedInventory.get(in.getItem().getId());
+
+                if(item.getQuantity() > 0) {
+                    possessedCount += item.getQuantity();
                     this.possessedItems.put(
                         in.getItem(),
-                        this.possessedItems.getOrDefault(in.getItem(), 0) + this.sharedInventory.get(in.getItem().getId()).getQuantity()
+                        this.possessedItems.getOrDefault(in.getItem(), 0) + item.getQuantity()
                     );
-                    return;
                 }
             }
 
-            this.missingItems.put(in.getItem(), this.missingItems.getOrDefault(in.getItem(), in.getQuantity()));
+            if(possessedCount < in.getQuantity()) {
+                this.missingItems.put(
+                    in.getItem(),
+                    this.missingItems.getOrDefault(in.getItem(), in.getQuantity()) - possessedCount
+                );
+            }
         });
     }
 
@@ -107,9 +116,8 @@ public class FusionProjection implements ActionElement {
         return this.solved;
     }
 
-    public FusionProjection setSolved(final boolean solved) {
+    public void setSolved(final boolean solved) {
         this.solved = solved;
-        return this;
     }
 
     @Override
