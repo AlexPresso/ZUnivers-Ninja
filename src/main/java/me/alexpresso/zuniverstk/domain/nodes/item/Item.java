@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import me.alexpresso.zuniverstk.classes.RarityMetadata;
 import me.alexpresso.zuniverstk.classes.projection.ActionElement;
 import me.alexpresso.zuniverstk.domain.base.BaseGraphObject;
+import me.alexpresso.zuniverstk.domain.relations.InputToFusion;
 import me.alexpresso.zuniverstk.domain.relations.InventoryItem;
 import org.springframework.data.neo4j.core.schema.Node;
 import org.springframework.data.neo4j.core.schema.Relationship;
@@ -14,6 +15,8 @@ import java.util.Set;
 
 @Node
 public class Item extends BaseGraphObject implements ActionElement {
+    @Relationship(type = "INVENTORY_ITEM", direction = Relationship.Direction.INCOMING)
+    private Set<InventoryItem> inventories = new HashSet<>();
     @JsonProperty("identifier")
     private Long itemIdentifier;
     private String name;
@@ -21,15 +24,14 @@ public class Item extends BaseGraphObject implements ActionElement {
     private int rarity;
     private String slug;
     private Set<String> urls;
+    private int score;
+    private int scoreGolden;
     @Relationship(type = "HOLDS", direction = Relationship.Direction.INCOMING)
     private Pack pack;
     @Relationship(type = "FUSION_INPUT", direction = Relationship.Direction.OUTGOING)
-    private Set<Fusion> inputOfFusions = new HashSet<>();
+    private Set<InputToFusion> inputOfFusions = new HashSet<>();
     @Relationship(type = "FUSION_RESULT", direction = Relationship.Direction.INCOMING)
     private Set<Fusion> resultOfFusions = new HashSet<>();
-    @Relationship(type = "INVENTORY_ITEM", direction = Relationship.Direction.INCOMING)
-    private Set<InventoryItem> inventories = new HashSet<>();
-
 
     public Long getItemIdentifier() {
         return itemIdentifier;
@@ -92,10 +94,10 @@ public class Item extends BaseGraphObject implements ActionElement {
         return this;
     }
 
-    public Set<Fusion> getInputOfFusions() {
+    public Set<InputToFusion> getInputOfFusions() {
         return inputOfFusions;
     }
-    public Item setInputOfFusions(Set<Fusion> inputOfFusions) {
+    public Item setInputOfFusions(Set<InputToFusion> inputOfFusions) {
         this.inputOfFusions = inputOfFusions;
         return this;
     }
@@ -110,6 +112,26 @@ public class Item extends BaseGraphObject implements ActionElement {
 
     public Set<InventoryItem> getInventories() {
         return this.inventories;
+    }
+    public Item setInventories(Set<InventoryItem> inventories) {
+        this.inventories = inventories;
+        return this;
+    }
+
+    public int getScore() {
+        return score;
+    }
+
+    public void setScore(int score) {
+        this.score = score;
+    }
+
+    public int getScoreGolden() {
+        return scoreGolden;
+    }
+
+    public void setScoreGolden(int scoreGolden) {
+        this.scoreGolden = scoreGolden;
     }
 
     @Override

@@ -87,17 +87,23 @@ public class ProjectionServiceImpl implements ProjectionService {
     private void tryFillMissing(final ActionList actions, final FusionProjection projection, final AtomicInteger loreDust) {
         final var cost = new AtomicInteger(0);
 
-        projection.getMissingItems().forEach(i -> {
-            cost.getAndAdd(projection.isGolden() ? i.getRarityMetadata().getGoldenCraftValue() : i.getRarityMetadata().getBaseCraftValue());
+        projection.getMissingItems().forEach((i, q) -> {
+            if(projection.isGolden()) {
+                cost.getAndAdd(i.getRarityMetadata().getGoldenCraftValue() * q);
+                cost.getAndAdd(i.getRarityMetadata().getEnchantValue() * q);
+            } else {
+                cost.getAndAdd(i.getRarityMetadata().getBaseCraftValue() * q);
+            }
+
             //TODO: can input be made by another fusion ?
         });
 
         if(loreDust.get() > cost.get()) {
-            projection.getMissingItems().forEach(i -> {
-                projection.getPossessedItems().add(i);
-                this.produceItem(projection.getSharedInventory(), i, projection.isGolden());
+            projection.getMissingItems().forEach((i, q) -> {
+                projection.getPossessedItems().put(i, q);
+                this.produceItem(projection.getSharedInventory(), i, projection.isGolden(), q);
 
-                actions.addElement(new Action(ActionType.CRAFT, i));
+                actions.addElement(new Action(ActionType.CRAFT, i), q);
             });
 
             projection.getMissingItems().clear();
@@ -119,9 +125,13 @@ public class ProjectionServiceImpl implements ProjectionService {
     }
 
     private void produceItem(final Map<String, ItemProjection> inventory, final Item item, final boolean golden) {
+        this.produceItem(inventory, item, golden, 1);
+    }
+
+    private void produceItem(final Map<String, ItemProjection> inventory, final Item item, final boolean golden, final int quantity) {
         final var projection = inventory.getOrDefault(item.getId(), new ItemProjection(item, golden, 0));
 
-        projection.produceOne();
+        projection.produce(quantity);
         inventory.put(item.getId(), projection);
     }
 }
