@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import me.alexpresso.zuniverstk.domain.nodes.item.Fusion;
 import me.alexpresso.zuniverstk.domain.nodes.item.Item;
 import me.alexpresso.zuniverstk.domain.nodes.item.Pack;
+import me.alexpresso.zuniverstk.domain.relations.FusionToInput;
 import me.alexpresso.zuniverstk.repositories.FusionRepository;
 import me.alexpresso.zuniverstk.repositories.ItemRepository;
 import me.alexpresso.zuniverstk.repositories.PackRepository;
@@ -97,8 +98,7 @@ public class ItemServiceImpl implements ItemService {
         fusions.forEach(f -> dbFusions.put(f.getResult().getId(), dbFusions.getOrDefault(f.getResult().getId(), f)
             .setResult(items.getOrDefault(f.getResult().getId(), f.getResult()))
             .setInputs(f.getInputs().stream()
-                .map(i -> items.getOrDefault(i.getId(), i))
-                .collect(Collectors.toSet())
+                .collect(Collectors.toMap(in -> items.get(in.getItem().getId()), FusionToInput::getQuantity))
             )
         ));
 

@@ -4,14 +4,14 @@ import me.alexpresso.zuniverstk.domain.nodes.item.Fusion;
 import me.alexpresso.zuniverstk.domain.nodes.item.Item;
 import me.alexpresso.zuniverstk.exceptions.ProjectionException;
 
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 
 public class FusionProjection implements ActionElement {
     private final Fusion fusion;
-    private final Set<Item> possessedItems;
-    private final Set<Item> missingItems;
+    private final Map<Item, Integer> possessedItems;
+    private final Map<Item, Integer> missingItems;
     private final boolean golden;
     private final Map<String, ItemProjection> sharedInventory;
     private int profit;
@@ -20,8 +20,8 @@ public class FusionProjection implements ActionElement {
 
     public FusionProjection(final Fusion fusion, final boolean golden, final Map<String, ItemProjection> sharedInventory) {
         this.fusion = fusion;
-        this.possessedItems = new HashSet<>();
-        this.missingItems = new HashSet<>();
+        this.possessedItems = new HashMap<>();
+        this.missingItems = new HashMap<>();
         this.profit = 0;
         this.golden = golden;
         this.sharedInventory = sharedInventory;
@@ -34,8 +34,7 @@ public class FusionProjection implements ActionElement {
 
     private void calculateProfit() {
         final var inputsSum = this.fusion.getInputs().stream()
-            .map(Item::getRarityMetadata)
-            .map(r -> this.golden ? r.getGoldenPoints() : r.getBasePoints())
+            .map(i -> (this.golden ? i.getItem().getScoreGolden() : i.getItem().getScore()) * i.getQuantity())
             .reduce(0, Integer::sum);
 
         this.profit = inputsSum + this.fusion.getResult().getRarityMetadata().getBonus();
@@ -56,27 +55,30 @@ public class FusionProjection implements ActionElement {
 
     public void refreshState() {
         fusion.getInputs().forEach(in -> {
-            if(this.sharedInventory.containsKey(in.getId())) {
-                if(this.sharedInventory.get(in.getId()).getQuantity() > 0) {
-                    this.possessedItems.add(in);
+            if(this.sharedInventory.containsKey(in.getItem().getId())) {
+                if(this.sharedInventory.get(in.getItem().getId()).getQuantity() > 0) {
+                    this.possessedItems.put(
+                        in.getItem(),
+                        this.possessedItems.getOrDefault(in.getItem(), 0) + this.sharedInventory.get(in.getItem().getId()).getQuantity()
+                    );
                     return;
                 }
             }
 
-            this.missingItems.add(in);
+            this.missingItems.put(in.getItem(), this.missingItems.getOrDefault(in.getItem(), 0) + 1);
         });
     }
 
     public FusionProjection consumeInputs() throws ProjectionException {
         final var projections = new HashSet<ItemProjection>();
 
-        for(var item : this.possessedItems) {
-            if(!this.sharedInventory.containsKey(item.getId()))
+        for(var item : this.possessedItems.entrySet()) {
+            if(!this.sharedInventory.containsKey(item.getKey().getId()))
                 throw new ProjectionException("No no no, you have no inventory entry for that item.");
 
-            final var iProjection = this.sharedInventory.get(item.getId());
-            if(iProjection.getQuantity() <= 0)
-                throw new ProjectionException("No no no, you don't own that item.");
+            final var iProjection = this.sharedInventory.get(item.getKey().getId());
+            if(iProjection.getQuantity() < item.getValue())
+                throw new ProjectionException("Not enough available items.");
 
             projections.add(iProjection);
         }
@@ -85,11 +87,11 @@ public class FusionProjection implements ActionElement {
         return this;
     }
 
-    public Set<Item> getPossessedItems() {
+    public Map<Item, Integer> getPossessedItems() {
         return this.possessedItems;
     }
 
-    public Set<Item> getMissingItems() {
+    public Map<Item, Integer> getMissingItems() {
         return this.missingItems;
     }
 

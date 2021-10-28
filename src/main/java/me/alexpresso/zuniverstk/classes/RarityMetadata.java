@@ -1,38 +1,34 @@
 package me.alexpresso.zuniverstk.classes;
 
 public enum RarityMetadata {
-    COMMON(1, 30, 0, 60, 20, 300, 100),
-    UNCOMMON(7, 40, 10, 80, 20, 800, 200),
-    RARE(19, 60, 30, 340, 100, 1600, 400),
-    ULTRA_RARE( 42, 100, 40, 1400, 400, 2800, 1400),
-    LEGENDARY( 42, 100, 40, 1400, 400, 2800, 1400),
-    STAR( 42, 100, 40, 1400, 400, 2800, 1400);
+    COMMON(1, 60, 20, 300, 100, 300),
+    UNCOMMON(7, 80, 20, 800, 200, 800),
+    RARE(19, 340, 100, 1600, 400, 1600),
+    ULTRA_RARE( 42, 1400, 400, 2800, 1400, 2800),
+    LEGENDARY( 42, 1400, 400, 2800, 1400, 0),
+    STAR( 42, 1400, 400, 2800, 1400, 0);
 
 
-
-    private final int basePoints;
-    private final int goldenPoints;
     private final int bonus;
     private final int baseCraftValue;
     private final int baseRecycleValue;
     private final int goldenCraftValue;
     private final int goldenRecycleValue;
+    private final int enchantValue;
 
 
-    RarityMetadata(final int basePoints,
-                   final int goldenPoints,
-                   final int bonus,
+    RarityMetadata(final int bonus,
                    final int baseCraftValue,
                    final int baseRecycleValue,
                    final int goldenCraftValue,
-                   final int goldenRecycleValue) {
-        this.basePoints = basePoints;
-        this.goldenPoints = goldenPoints;
+                   final int goldenRecycleValue,
+                   final int enchantValue) {
         this.bonus = bonus;
         this.baseCraftValue = baseCraftValue;
         this.baseRecycleValue = baseRecycleValue;
         this.goldenCraftValue = goldenCraftValue;
         this.goldenRecycleValue = goldenRecycleValue;
+        this.enchantValue = enchantValue;
     }
 
 
@@ -56,15 +52,11 @@ public enum RarityMetadata {
         return goldenRecycleValue;
     }
 
-    public int getBasePoints() {
-        return this.basePoints;
-    }
-
-    public int getGoldenPoints() {
-        return this.goldenPoints;
-    }
-
     public int getBonus() {
         return this.bonus;
+    }
+
+    public int getEnchantValue() {
+        return this.enchantValue;
     }
 }
