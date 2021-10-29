@@ -61,7 +61,7 @@ public class ItemServiceImpl implements ItemService {
         final var packs = items.stream()
             .map(Item::getPack)
             .filter(StreamUtils.distinctByKey(Pack::getId))
-            .collect(Collectors.toMap(Pack::getId, p -> dbPacks.getOrDefault(p.getId(), p).setName(p.getName())));
+            .collect(Collectors.toMap(Pack::getId, p -> dbPacks.getOrDefault(p.getId(), p).setName(p.getName()).setCraftable(p.getName().equalsIgnoreCase("vanilla"))));
 
         items.forEach(i -> dbItems.put(i.getId(), dbItems.getOrDefault(i.getId(), i)
             .setPack(packs.get(i.getPack().getId()))

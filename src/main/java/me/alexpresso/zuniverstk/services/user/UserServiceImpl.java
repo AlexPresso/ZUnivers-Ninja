@@ -76,7 +76,7 @@ public class UserServiceImpl implements UserService {
         final var userInventory = user.getInventory().stream()
             .collect(Collectors.toMap(InventoryItem::getId, Function.identity()));
 
-        user.setStatistics(statistics)
+        user.setStatistics(user.getStatistics() == null ? statistics : user.getStatistics())
             .setLoreDust(statistics.getUser().getLoreDust())
             .setBalance(statistics.getUser().getBalance())
             .setScore(statistics.getUser().getScore())
