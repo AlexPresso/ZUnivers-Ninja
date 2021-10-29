@@ -5,8 +5,8 @@ public enum RarityMetadata {
     UNCOMMON(7, 80, 20, 800, 200, 800),
     RARE(19, 340, 100, 1600, 400, 1600),
     ULTRA_RARE( 42, 1400, 400, 2800, 1400, 2800),
-    LEGENDARY( 42, 1400, 400, 2800, 1400, 0),
-    STAR( 42, 1400, 400, 2800, 1400, 0);
+    LEGENDARY( 42, 1400, 400, 2800, 1400, 2800),
+    STAR( 42, 1400, 400, 2800, 1400, 2800);
 
 
     private final int bonus;

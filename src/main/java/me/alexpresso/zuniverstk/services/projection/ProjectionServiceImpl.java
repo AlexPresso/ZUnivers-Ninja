@@ -80,7 +80,7 @@ public class ProjectionServiceImpl implements ProjectionService {
 
         projections.get().stream()
             .filter(p -> !p.isSolved() && !inventory.containsKey(p.getFusion().getResult().getId()))
-            .sorted(Comparator.comparingDouble(FusionProjection::getDoability).reversed())
+            .sorted(Comparator.comparingDouble(FusionProjection::getDoability).thenComparing(FusionProjection::getProfit).reversed())
             .forEach(p -> {
                 if(p.getDoability() >= 100)
                     this.solvedFusion(actions, p, score);
@@ -180,9 +180,12 @@ public class ProjectionServiceImpl implements ProjectionService {
                                           final InventoryProjection inventory,
                                           final AtomicInteger score) {
         final var summary = new ProjectionSummary(actions);
+        final var oldInventory = new InventoryProjection(user);
 
         summary.put("Poussière de lore", new Change(user.getLoreDust(), loreDust.get()));
         summary.put("Score", new Change(user.getScore(), score.get()));
+        summary.put("Cartes normales", new Change(oldInventory.getNormalInventory().size(), inventory.getNormalInventory().size()));
+        summary.put("Cartes dorées", new Change(oldInventory.getGoldenInventory().size(), inventory.getGoldenInventory().size()));
 
         return summary;
     }
