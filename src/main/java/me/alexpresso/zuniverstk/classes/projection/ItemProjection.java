@@ -30,8 +30,8 @@ public class ItemProjection implements ActionElement {
     public int getQuantity() {
         return quantity;
     }
-    public void consumeOne() {
-        this.quantity--;
+    public void consume(final int quantity) {
+        this.quantity -= quantity;
     }
     public void produce(final int quantity) {
         this.quantity += quantity;
