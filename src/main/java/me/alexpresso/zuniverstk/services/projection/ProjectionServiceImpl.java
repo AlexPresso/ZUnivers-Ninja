@@ -1,7 +1,9 @@
 package me.alexpresso.zuniverstk.services.projection;
 
+import me.alexpresso.zuniverstk.classes.Change;
 import me.alexpresso.zuniverstk.classes.projection.*;
 import me.alexpresso.zuniverstk.domain.nodes.item.Item;
+import me.alexpresso.zuniverstk.domain.nodes.user.User;
 import me.alexpresso.zuniverstk.exceptions.NodeNotFoundException;
 import me.alexpresso.zuniverstk.exceptions.ProjectionException;
 import me.alexpresso.zuniverstk.repositories.FusionRepository;
@@ -11,7 +13,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.Comparator;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -34,36 +35,39 @@ public class ProjectionServiceImpl implements ProjectionService {
 
 
     @Override
-    public List<Action> makeProjectionsFor(String discordTag) throws NodeNotFoundException {
+    public ProjectionSummary makeProjectionsFor(String discordTag) throws NodeNotFoundException {
         final var actions = new ActionList();
         final var user = this.userService.getUser(discordTag)
             .orElseThrow(() -> new NodeNotFoundException("This user doesn't exist."));
 
         final var inventory = new InventoryProjection(user);
         final var loreDust = new AtomicInteger(user.getLoreDust());
+        final var score = new AtomicInteger(user.getScore());
         final var normalFusions = new AtomicReference<Set<FusionProjection>>(null);
         final var goldenFusions = new AtomicReference<Set<FusionProjection>>(null);
 
-        this.project(actions, loreDust, inventory, normalFusions, goldenFusions);
+        this.project(actions, loreDust, score, inventory, normalFusions, goldenFusions);
 
-        return actions;
+        return this.makeSummary(actions, user, loreDust, inventory, score);
     }
 
     private void project(final ActionList actions,
                          final AtomicInteger loreDust,
+                         final AtomicInteger score,
                          final InventoryProjection inventory,
                          final AtomicReference<Set<FusionProjection>> normalFusions,
                          final AtomicReference<Set<FusionProjection>> goldenFusions) {
-        this.projectFusions(actions, loreDust, inventory.getNormalInventory(), false, normalFusions);
-        this.projectFusions(actions, loreDust, inventory.getGoldenInventory(), true, goldenFusions);
-        this.projectUpgrades(actions, loreDust, inventory);
+        this.projectFusions(actions, loreDust, score, inventory.getNormalInventory(), false, normalFusions);
+        this.projectFusions(actions, loreDust, score, inventory.getGoldenInventory(), true, goldenFusions);
+        this.projectUpgrades(actions, loreDust, score, inventory);
 
         if(actions.hasChanged())
-            this.project(actions.newCycle(), loreDust, inventory, normalFusions, goldenFusions);
+            this.project(actions.newCycle(), loreDust, score, inventory, normalFusions, goldenFusions);
     }
 
     private void projectFusions(final ActionList actions,
                                 final AtomicInteger loreDust,
+                                final AtomicInteger score,
                                 final Map<String, ItemProjection> inventory,
                                 final boolean golden,
                                 final AtomicReference<Set<FusionProjection>> projections) {
@@ -79,7 +83,7 @@ public class ProjectionServiceImpl implements ProjectionService {
             .sorted(Comparator.comparingDouble(FusionProjection::getDoability).reversed())
             .forEach(p -> {
                 if(p.getDoability() >= 100)
-                    this.solvedFusion(actions, p);
+                    this.solvedFusion(actions, p, score);
                 else
                     this.tryFillMissing(actions, p, loreDust);
             });
@@ -106,7 +110,7 @@ public class ProjectionServiceImpl implements ProjectionService {
         //TODO: Wait for items to have "craftable" property
         if(loreDust.get() > cost.get() && craftable.get() == projection.getMissingItems().size()) {
             projection.getMissingItems().forEach((i, q) -> {
-                this.produceItem(projection.getSharedInventory(), i, projection.isGolden(), q);
+                this.produceItem(projection.getSharedInventory(), i, q);
 
                 actions.addElement(ActionType.CRAFT, i, q);
                 if(projection.isGolden()) {
@@ -118,28 +122,32 @@ public class ProjectionServiceImpl implements ProjectionService {
         }
     }
 
-    private void solvedFusion(final ActionList actions, final FusionProjection projection) {
+    private void solvedFusion(final ActionList actions, final FusionProjection projection, final AtomicInteger score) {
         try {
             projection.consumeInputs().setSolved(true);
             actions.addElement(new Action(ActionType.FUSION, projection));
 
-            this.produceItem(projection.getSharedInventory(), projection.getFusion().getResult(), projection.isGolden());
+            this.produceItem(projection.getSharedInventory(), projection.getFusion().getResult(), 1);
 
+            score.getAndAdd(projection.getProfit());
             logger.debug("Solved fusion {}", projection.getIdentifier());
         } catch (ProjectionException e) {
             logger.debug("Cannot consume inputs, a previous fusion may already have consumed one of these.");
         }
     }
 
-    private void projectUpgrades(final ActionList actions, final AtomicInteger loreDust, final InventoryProjection inventory) {
+    private void projectUpgrades(final ActionList actions, final AtomicInteger loreDust, final AtomicInteger score, final InventoryProjection inventory) {
         inventory.getNormalInventory().forEach((id, item) -> {
             final var cost = item.getItem().getRarityMetadata().getEnchantValue();
 
             if(!inventory.getGoldenInventory().containsKey(id) && item.getQuantity() > 0 && loreDust.get() > cost) {
-                this.produceItem(inventory.getGoldenInventory(), item.getItem(), true);
+                this.produceItem(inventory.getGoldenInventory(), item.getItem());
                 this.consumeItem(inventory.getNormalInventory(), item.getItem());
-                loreDust.set(loreDust.get() - cost);
+
                 actions.addElement(new Action(ActionType.ENCHANT, item));
+
+                loreDust.set(loreDust.get() - cost);
+                score.getAndAdd(item.getItem().getRarityMetadata().getEnchantValue());
             }
         });
     }
@@ -156,13 +164,26 @@ public class ProjectionServiceImpl implements ProjectionService {
         projection.consume(quantity);
     }
 
-    private void produceItem(final Map<String, ItemProjection> inventory, final Item item, final boolean golden) {
-        this.produceItem(inventory, item, golden, 1);
+    private void produceItem(final Map<String, ItemProjection> inventory, final Item item) {
+        this.produceItem(inventory, item, 1);
     }
-    private void produceItem(final Map<String, ItemProjection> inventory, final Item item, final boolean golden, final int quantity) {
-        final var projection = inventory.getOrDefault(item.getId(), new ItemProjection(item, golden, 0));
+    private void produceItem(final Map<String, ItemProjection> inventory, final Item item, final int quantity) {
+        final var projection = inventory.getOrDefault(item.getId(), new ItemProjection(item, 0));
 
         projection.produce(quantity);
         inventory.put(item.getId(), projection);
+    }
+
+    private ProjectionSummary makeSummary(final ActionList actions,
+                                          final User user,
+                                          final AtomicInteger loreDust,
+                                          final InventoryProjection inventory,
+                                          final AtomicInteger score) {
+        final var summary = new ProjectionSummary(actions);
+
+        summary.put("Poussière de lore", new Change(user.getLoreDust(), loreDust.get()));
+        summary.put("Score", new Change(user.getScore(), score.get()));
+
+        return summary;
     }
 }
