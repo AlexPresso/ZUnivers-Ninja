@@ -33,17 +33,14 @@ public class TaskManager {
 
 
     @Scheduled(fixedDelay = 30 * 60 * 1000)
-    public void updateLore() throws IOException, InterruptedException {
+    public void updateLore() throws IOException, InterruptedException, NodeNotFoundException {
         logger.info("Updating lore...");
 
         final var items = this.itemService.updateItems();
         this.itemService.updateFusions(items);
 
         logger.info("Done updating lore.");
-    }
 
-    @Scheduled(fixedDelay = 30 * 60 * 1000)
-    public void inventoryTasks() throws IOException, InterruptedException, NodeNotFoundException {
         this.userService.updateUserAndInventory(this.discordTag);
         this.adviceService.adviseUser(this.discordTag);
     }

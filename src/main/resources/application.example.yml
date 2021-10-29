@@ -10,3 +10,9 @@ toolkit:
 zunivers:
   apiBaseUrl: zunivers-api.zerator.com
   frontBaseUrl: zunivers.zerator.com
+
+webhookUrl: #insert your own
+
+logging:
+  level:
+    me.alexpresso.zuniverstk: DEBUG
