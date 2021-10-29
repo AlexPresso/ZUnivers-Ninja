@@ -78,7 +78,7 @@ public class ProjectionServiceImpl implements ProjectionService {
             .filter(p -> !p.isSolved() && !inventory.containsKey(p.getFusion().getResult().getId()))
             .sorted(Comparator.comparingDouble(FusionProjection::getDoability).reversed())
             .forEach(p -> {
-                if(p.getMissingItems().isEmpty())
+                if(p.getDoability() >= 100)
                     this.solvedFusion(actions, p);
                 else
                     this.tryFillMissing(actions, p, loreDust);
@@ -100,13 +100,12 @@ public class ProjectionServiceImpl implements ProjectionService {
             if(i.getPack().isCraftable())
                 craftable.incrementAndGet();
 
-            //TODO: can input be made by another fusion ?
+            //TODO: can input be made by another cheaper fusion ?
         });
 
-        //TODO: Fetch events to update "craftable" pack's property
+        //TODO: Wait for items to have "craftable" property
         if(loreDust.get() > cost.get() && craftable.get() == projection.getMissingItems().size()) {
             projection.getMissingItems().forEach((i, q) -> {
-                projection.getPossessedItems().put(i, q);
                 this.produceItem(projection.getSharedInventory(), i, projection.isGolden(), q);
 
                 actions.addElement(ActionType.CRAFT, i, q);
@@ -115,7 +114,6 @@ public class ProjectionServiceImpl implements ProjectionService {
                 }
             });
 
-            projection.getMissingItems().clear();
             loreDust.set(loreDust.get() - cost.get());
         }
     }
@@ -150,19 +148,17 @@ public class ProjectionServiceImpl implements ProjectionService {
     private void consumeItem(final Map<String, ItemProjection> inventory, final Item item) {
         this.consumeItem(inventory, item, 1);
     }
-
     private void consumeItem(final Map<String, ItemProjection> inventory, final Item item, final int quantity) {
         if(!inventory.containsKey(item.getId()))
             return;
 
         final var projection = inventory.get(item.getId());
-        projection.consumeOne();
+        projection.consume(quantity);
     }
 
     private void produceItem(final Map<String, ItemProjection> inventory, final Item item, final boolean golden) {
         this.produceItem(inventory, item, golden, 1);
     }
-
     private void produceItem(final Map<String, ItemProjection> inventory, final Item item, final boolean golden, final int quantity) {
         final var projection = inventory.getOrDefault(item.getId(), new ItemProjection(item, golden, 0));
 
