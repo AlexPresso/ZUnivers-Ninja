@@ -83,7 +83,7 @@ public class FusionProjection implements ActionElement {
         return missing;
     }
 
-    public double getProfit() {
+    public int getProfit() {
         return this.profit;
     }
 
