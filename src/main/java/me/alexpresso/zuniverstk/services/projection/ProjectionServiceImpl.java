@@ -86,6 +86,7 @@ public class ProjectionServiceImpl implements ProjectionService {
 
     private void tryFillMissing(final ActionList actions, final FusionProjection projection, final AtomicInteger loreDust) {
         final var cost = new AtomicInteger(0);
+        final var craftable = new AtomicInteger(0);
 
         projection.getMissingItems().forEach((i, q) -> {
             if(projection.isGolden()) {
@@ -95,10 +96,14 @@ public class ProjectionServiceImpl implements ProjectionService {
                 cost.getAndAdd(i.getRarityMetadata().getBaseCraftValue() * q);
             }
 
+            if(i.getPack().isCraftable())
+                craftable.incrementAndGet();
+
             //TODO: can input be made by another fusion ?
         });
 
-        if(loreDust.get() > cost.get()) {
+        //TODO: Fetch events to update "craftable" pack's property
+        if(loreDust.get() > cost.get() && craftable.get() == projection.getMissingItems().size()) {
             projection.getMissingItems().forEach((i, q) -> {
                 projection.getPossessedItems().put(i, q);
                 this.produceItem(projection.getSharedInventory(), i, projection.isGolden(), q);
