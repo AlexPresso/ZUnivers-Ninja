@@ -3,6 +3,7 @@ package me.alexpresso.zuniverstk.classes.projection;
 import me.alexpresso.zuniverstk.domain.nodes.user.User;
 import me.alexpresso.zuniverstk.domain.relations.InventoryItem;
 
+import java.util.Collection;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -25,5 +26,19 @@ public class InventoryProjection {
 
     public Map<String, ItemProjection> getGoldenInventory() {
         return this.goldenInventory;
+    }
+
+    public long getNormalCount() {
+        return this.getCount(this.normalInventory.values());
+    }
+
+    public long getGoldenCount() {
+        return this.getCount(this.goldenInventory.values());
+    }
+
+    private long getCount(final Collection<ItemProjection> projections) {
+        return projections.stream()
+            .filter(p -> p.getQuantity() > 0)
+            .count();
     }
 }
