@@ -43,7 +43,7 @@ public class AdviceServiceImpl implements AdviceService {
 
             final var sb = new StringBuilder();
             summary.getChanges().entrySet().stream()
-                .filter(e -> e.getValue().getBefore() != e.getValue().getAfter())
+                .filter(e -> !e.getValue().getBefore().equals(e.getValue().getAfter()))
                 .forEach(e -> sb.append(String.format("%s: `%s` → `%s`\n", e.getKey(), e.getValue().getBefore(), e.getValue().getAfter())));
 
             final var embed = new WebhookEmbedBuilder()

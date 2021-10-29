@@ -184,8 +184,8 @@ public class ProjectionServiceImpl implements ProjectionService {
 
         summary.put("Poussière de lore", new Change(user.getLoreDust(), loreDust.get()));
         summary.put("Score", new Change(user.getScore(), score.get()));
-        summary.put("Cartes normales", new Change(oldInventory.getNormalInventory().size(), inventory.getNormalInventory().size()));
-        summary.put("Cartes dorées", new Change(oldInventory.getGoldenInventory().size(), inventory.getGoldenInventory().size()));
+        summary.put("Cartes normales", new Change(oldInventory.getNormalCount(), inventory.getNormalCount()));
+        summary.put("Cartes dorées", new Change(oldInventory.getGoldenCount(), inventory.getGoldenCount()));
 
         return summary;
     }
