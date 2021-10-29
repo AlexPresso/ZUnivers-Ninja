@@ -42,13 +42,9 @@ public class AdviceServiceImpl implements AdviceService {
                 .orElseThrow(() -> new NodeNotFoundException("This user doesn't exist."));
 
             final var sb = new StringBuilder();
-            summary.getChanges().forEach((name, change) -> {
-                var previous = "";
-                if(change.getBefore() != change.getAfter())
-                    previous = String.format("`%s` → ", change.getBefore());
-
-                sb.append(String.format("%s: %s`%s`\n", name, previous, change.getAfter()));
-            });
+            summary.getChanges().entrySet().stream()
+                .filter(e -> e.getValue().getBefore() != e.getValue().getAfter())
+                .forEach(e -> sb.append(String.format("%s: `%s` → `%s`\n", e.getKey(), e.getValue().getBefore(), e.getValue().getAfter())));
 
             final var embed = new WebhookEmbedBuilder()
                 .setColor(0xff3434)
