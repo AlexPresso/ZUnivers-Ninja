@@ -56,6 +56,7 @@ public class ProjectionServiceImpl implements ProjectionService {
                          final AtomicReference<Set<FusionProjection>> goldenFusions) {
         this.projectFusions(actions, loreDust, inventory.getNormalInventory(), false, normalFusions);
         this.projectFusions(actions, loreDust, inventory.getGoldenInventory(), true, goldenFusions);
+        this.projectUpgrades(actions, loreDust, inventory);
 
         if(actions.hasChanged())
             this.project(actions.newCycle(), loreDust, inventory, normalFusions, goldenFusions);
@@ -130,6 +131,32 @@ public class ProjectionServiceImpl implements ProjectionService {
         } catch (ProjectionException e) {
             logger.debug("Cannot consume inputs, a previous fusion may already have consumed one of these.");
         }
+    }
+
+    private void projectUpgrades(final ActionList actions, final AtomicInteger loreDust, final InventoryProjection inventory) {
+        inventory.getNormalInventory().forEach((id, item) -> {
+            final var cost = item.getItem().getRarityMetadata().getEnchantValue();
+
+            if(!inventory.getGoldenInventory().containsKey(id) && item.getQuantity() > 0 && loreDust.get() > cost) {
+                this.produceItem(inventory.getGoldenInventory(), item.getItem(), true);
+                this.consumeItem(inventory.getNormalInventory(), item.getItem());
+                loreDust.set(loreDust.get() - cost);
+                actions.addElement(new Action(ActionType.ENCHANT, item));
+            }
+        });
+    }
+
+
+    private void consumeItem(final Map<String, ItemProjection> inventory, final Item item) {
+        this.consumeItem(inventory, item, 1);
+    }
+
+    private void consumeItem(final Map<String, ItemProjection> inventory, final Item item, final int quantity) {
+        if(!inventory.containsKey(item.getId()))
+            return;
+
+        final var projection = inventory.get(item.getId());
+        projection.consumeOne();
     }
 
     private void produceItem(final Map<String, ItemProjection> inventory, final Item item, final boolean golden) {
