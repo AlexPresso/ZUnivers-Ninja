@@ -23,13 +23,13 @@ public class PluginConfiguration implements BeanFactoryAware {
     private BeanFactory beanFactory;
 
     @Autowired
-    public PluginConfiguration(SpringPluginManager pm, ApplicationContext applicationContext) {
+    public PluginConfiguration(final SpringPluginManager pm, final ApplicationContext applicationContext) {
         this.pluginManager = pm;
         this.applicationContext = applicationContext;
     }
 
     @Override
-    public void setBeanFactory(BeanFactory beanFactory) throws BeansException {
+    public void setBeanFactory(final BeanFactory beanFactory) throws BeansException {
         this.beanFactory = beanFactory;
     }
 
