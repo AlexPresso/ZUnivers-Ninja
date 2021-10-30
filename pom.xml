@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>me.alexpresso</groupId>
-    <artifactId>zuniverstk</artifactId>
+    <artifactId>zunivers-ninja</artifactId>
     <version>1.0-SNAPSHOT</version>
 
     <properties>
@@ -14,6 +14,14 @@
         <pf4j-spring.version>0.7.0</pf4j-spring.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
+
+    <distributionManagement>
+        <repository>
+            <id>github</id>
+            <name>GitHub AlexPresso Apache Maven Packages</name>
+            <url>https://maven.pkg.github.com/AlexPresso/ZUnivers-Ninja</url>
+        </repository>
+    </distributionManagement>
 
     <parent>
         <groupId>org.springframework.boot</groupId>
