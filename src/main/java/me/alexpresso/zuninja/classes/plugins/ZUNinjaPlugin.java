@@ -1,10 +1,13 @@
 package me.alexpresso.zuninja.classes.plugins;
 
 import me.alexpresso.zuninja.classes.projection.ProjectionSummary;
-import org.pf4j.ExtensionPoint;
+import org.pf4j.PluginWrapper;
+import org.pf4j.spring.SpringPlugin;
 
-public interface ZUNinjaPlugin extends ExtensionPoint {
-    void onStart();
+public abstract class ZUNinjaPlugin extends SpringPlugin {
+    public ZUNinjaPlugin(PluginWrapper wrapper) {
+        super(wrapper);
+    }
 
-    void onAdvice(ProjectionSummary summary);
+    public abstract void onAdvice(ProjectionSummary summary);
 }

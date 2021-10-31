@@ -7,9 +7,10 @@ import me.alexpresso.zuninja.exceptions.NodeNotFoundException;
 import me.alexpresso.zuninja.repositories.UserRepository;
 import me.alexpresso.zuninja.services.dispatch.DispatchService;
 import me.alexpresso.zuninja.services.projection.ProjectionService;
+import org.pf4j.PluginManager;
+import org.pf4j.PluginWrapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;
 
 import java.util.stream.Collectors;
@@ -21,14 +22,14 @@ public class AdviceServiceImpl implements AdviceService {
     private final ProjectionService projectionService;
     private final DispatchService dispatchService;
     private final UserRepository userRepository;
-    private final ApplicationContext applicationContext;
+    private final PluginManager pluginManager;
 
 
-    public AdviceServiceImpl(final ProjectionService ps, final DispatchService ds, final UserRepository ur, final ApplicationContext ac) {
+    public AdviceServiceImpl(final ProjectionService ps, final DispatchService ds, final UserRepository ur, final PluginManager pm) {
         this.projectionService = ps;
         this.dispatchService = ds;
         this.userRepository = ur;
-        this.applicationContext = ac;
+        this.pluginManager = pm;
     }
 
 
@@ -59,7 +60,9 @@ public class AdviceServiceImpl implements AdviceService {
             this.dispatchService.dispatch(embed, discordId);
         }
 
-        this.applicationContext.getBeansOfType(ZUNinjaPlugin.class).forEach((k, v) -> v.onAdvice(summary));
+        this.pluginManager.getPlugins().stream()
+            .map(PluginWrapper::getPlugin)
+            .forEach(p -> ((ZUNinjaPlugin) p).onAdvice(summary));
 
         logger.info("Done advising {}.", discordTag);
     }
