@@ -34,7 +34,7 @@ public class AdviceServiceImpl implements AdviceService {
 
     @Override
     public void adviseUser(final String discordTag) throws NodeNotFoundException {
-        logger.debug("Preparing to advise {}...", discordTag);
+        logger.info("Preparing to advise {}...", discordTag);
 
         final var summary = this.projectionService.makeProjectionsFor(discordTag);
         final var cmds = summary.getActions().stream()
@@ -61,6 +61,6 @@ public class AdviceServiceImpl implements AdviceService {
 
         this.applicationContext.getBeansOfType(ZUNinjaPlugin.class).forEach((k, v) -> v.onAdvice(summary));
 
-        logger.debug("Done advising {}.", discordTag);
+        logger.info("Done advising {}.", discordTag);
     }
 }

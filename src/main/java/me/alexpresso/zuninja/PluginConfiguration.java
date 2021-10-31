@@ -35,7 +35,7 @@ public class PluginConfiguration implements BeanFactoryAware {
 
     @Bean
     @DependsOn("pluginManager")
-    public void registerPlugins(PluginManager pm) {
+    public boolean registerPlugins(PluginManager pm) {
         pm.getExtensions(ZUNinjaPlugin.class).forEach(plugin ->
             ((ConfigurableBeanFactory) this.beanFactory).registerSingleton(
                 plugin.getClass().getName(),
@@ -44,6 +44,7 @@ public class PluginConfiguration implements BeanFactoryAware {
         );
 
         this.applicationContext.getBeansOfType(ZUNinjaPlugin.class).forEach((k, v) -> v.onStart());
+        return true;
     }
 
     @PreDestroy
