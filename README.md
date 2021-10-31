@@ -1,6 +1,7 @@
 # ZUnivers-Ninja
 
 ## Getting started
+- setup a Neo4J database ([docker-image](https://hub.docker.com/_/neo4j))
 - clone the repo
 - build the jar with `mvn package`
 - create a `/config` directory next to the built jar
