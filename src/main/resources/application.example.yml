@@ -11,7 +11,7 @@ zunivers:
   apiBaseUrl: zunivers-api.zerator.com
   frontBaseUrl: zunivers.zerator.com
 
-webhookUrl: #insert your own
+webhookUrl: #insert your own (facultative)
 
 logging:
   level:

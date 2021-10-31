@@ -1,3 +1,6 @@
 /.idea
 /target
-/src/main/resources/application.yml
+/config
+/plugins/*.jar
+/plugins/*/.idea
+/plugins/*/target
