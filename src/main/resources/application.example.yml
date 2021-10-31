@@ -15,4 +15,4 @@ webhookUrl: #insert your own (facultative)
 
 logging:
   level:
-    me.alexpresso.zuniverstk: DEBUG
+    me.alexpresso.zuninja: INFO
