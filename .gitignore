@@ -1,6 +1,7 @@
 /.idea
 /target
 /config
-/plugins/*.jar
-/plugins/*/.idea
-/plugins/*/target
+/plugins
+
+/zuninja-plugin-example/.idea
+/zuninja-plugin-example/target

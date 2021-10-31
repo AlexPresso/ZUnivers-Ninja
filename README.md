@@ -10,4 +10,4 @@
 
 ## Making plugins
 The app supports plugins, by loading every jar files in a `/plugins` directory.  
-See the [zuninja-plugin-example](https://github.com/AlexPresso/ZUnivers-Ninja/tree/main/plugins/zuninja-plugin-example) project.
+See the [zuninja-plugin-example](https://github.com/AlexPresso/ZUnivers-Ninja/tree/main/zuninja-plugin-example) project.
