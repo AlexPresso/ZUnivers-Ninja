@@ -1,4 +1,4 @@
 /.idea
 /target
-/src/main/resources/application.yml
+/config
 /plugins
