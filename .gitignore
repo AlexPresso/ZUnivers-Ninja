@@ -1,4 +1,6 @@
 /.idea
 /target
 /config
-/plugins
+/plugins/*.jar
+/plugins/*/.idea
+/plugins/*/target
