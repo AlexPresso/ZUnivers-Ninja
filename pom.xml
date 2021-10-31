@@ -5,13 +5,23 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>me.alexpresso</groupId>
-    <artifactId>zuniverstk</artifactId>
+    <artifactId>zunivers-ninja</artifactId>
     <version>1.0-SNAPSHOT</version>
 
     <properties>
         <maven.compiler.source>11</maven.compiler.source>
         <maven.compiler.target>11</maven.compiler.target>
+        <pf4j-spring.version>0.7.0</pf4j-spring.version>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
+
+    <distributionManagement>
+        <repository>
+            <id>github</id>
+            <name>GitHub AlexPresso Apache Maven Packages</name>
+            <url>https://maven.pkg.github.com/AlexPresso/ZUnivers-Ninja</url>
+        </repository>
+    </distributionManagement>
 
     <parent>
         <groupId>org.springframework.boot</groupId>
@@ -35,6 +45,12 @@
             <artifactId>discord-webhooks</artifactId>
             <version>0.7.2</version>
         </dependency>
+        <dependency>
+            <groupId>org.pf4j</groupId>
+            <artifactId>pf4j-spring</artifactId>
+            <version>${pf4j-spring.version}</version>
+            <scope>provided</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -42,6 +58,9 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <classifier>exec</classifier>
+                </configuration>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -50,6 +69,20 @@
                 <configuration>
                     <source>11</source>
                     <target>11</target>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>3.1.0</version>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <addClasspath>true</addClasspath>
+                            <classpathPrefix>lib/</classpathPrefix>
+                            <mainClass>me.alexpresso.zuninja.Application</mainClass>
+                        </manifest>
+                    </archive>
                 </configuration>
             </plugin>
         </plugins>
