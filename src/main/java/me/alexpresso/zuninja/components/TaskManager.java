@@ -2,6 +2,7 @@ package me.alexpresso.zuninja.components;
 
 import me.alexpresso.zuninja.exceptions.NodeNotFoundException;
 import me.alexpresso.zuninja.services.advise.AdviceService;
+import me.alexpresso.zuninja.services.event.EventService;
 import me.alexpresso.zuninja.services.item.ItemService;
 import me.alexpresso.zuninja.services.user.UserService;
 import org.slf4j.Logger;
@@ -18,6 +19,7 @@ public class TaskManager {
     private static final Logger logger = LoggerFactory.getLogger(TaskManager.class);
 
     private final ItemService itemService;
+    private final EventService eventService;
     private final UserService userService;
     private final AdviceService adviceService;
 
@@ -25,8 +27,9 @@ public class TaskManager {
     private String discordTag;
 
 
-    public TaskManager(final ItemService is, final UserService us, final AdviceService as) {
+    public TaskManager(final ItemService is, final EventService es, final UserService us, final AdviceService as) {
         this.itemService = is;
+        this.eventService = es;
         this.userService = us;
         this.adviceService = as;
     }
@@ -38,6 +41,7 @@ public class TaskManager {
 
         final var items = this.itemService.updateItems();
         this.itemService.updateFusions(items);
+        this.eventService.updateEvents();
 
         logger.info("Done updating lore.");
 
