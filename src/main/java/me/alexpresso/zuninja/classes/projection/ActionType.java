@@ -4,7 +4,8 @@ public enum ActionType {
     RECYCLE("recyclage"),
     CRAFT("creation"),
     ENCHANT("enchantment"),
-    FUSION("fusion");
+    FUSION("fusion"),
+    INVOCATION("im");
 
     private final String command;
 
