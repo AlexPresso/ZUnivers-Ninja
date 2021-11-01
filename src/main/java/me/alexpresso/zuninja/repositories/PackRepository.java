@@ -7,6 +7,4 @@ import org.springframework.data.neo4j.repository.query.Query;
 import java.util.Set;
 
 public interface PackRepository extends Neo4jRepository<Pack, Long> {
-    @Query("MATCH (p:Pack) RETURN p")
-    Set<Pack> findAllLight();
 }
