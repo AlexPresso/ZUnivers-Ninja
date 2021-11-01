@@ -42,27 +42,30 @@ public class ProjectionServiceImpl implements ProjectionService {
 
         final var inventory = new InventoryProjection(user);
         final var loreDust = new AtomicInteger(user.getLoreDust());
+        final var balance = new AtomicInteger(user.getBalance());
         final var score = new AtomicInteger(user.getScore());
         final var normalFusions = new AtomicReference<Set<FusionProjection>>(null);
         final var goldenFusions = new AtomicReference<Set<FusionProjection>>(null);
 
-        this.project(actions, loreDust, score, inventory, normalFusions, goldenFusions);
+        this.project(actions, loreDust, score, balance, inventory, normalFusions, goldenFusions);
 
-        return this.makeSummary(actions, user, loreDust, inventory, score);
+        return this.makeSummary(actions, user, loreDust, balance, inventory, score);
     }
 
     private void project(final ActionList actions,
                          final AtomicInteger loreDust,
                          final AtomicInteger score,
+                         final AtomicInteger balance,
                          final InventoryProjection inventory,
                          final AtomicReference<Set<FusionProjection>> normalFusions,
                          final AtomicReference<Set<FusionProjection>> goldenFusions) {
         this.projectFusions(actions, loreDust, score, inventory.getNormalInventory(), false, normalFusions);
         this.projectFusions(actions, loreDust, score, inventory.getGoldenInventory(), true, goldenFusions);
         this.projectUpgrades(actions, loreDust, score, inventory);
+        this.projectInvocation(actions, balance);
 
         if(actions.hasChanged())
-            this.project(actions.newCycle(), loreDust, score, inventory, normalFusions, goldenFusions);
+            this.project(actions.newCycle(), loreDust, score, balance, inventory, normalFusions, goldenFusions);
     }
 
     private void projectFusions(final ActionList actions,
@@ -152,6 +155,13 @@ public class ProjectionServiceImpl implements ProjectionService {
         });
     }
 
+    private void projectInvocation(final ActionList actions, final AtomicInteger balance) {
+        if(balance.get() >= 1000) {
+            //TODO: Prioritize event when there's one (put it in target)
+            actions.addElement(new Action(ActionType.INVOCATION, null));
+            balance.set(balance.get() - 1000);
+        }
+    }
 
     private void consumeItem(final Map<String, ItemProjection> inventory, final Item item) {
         this.consumeItem(inventory, item, 1);
@@ -177,6 +187,7 @@ public class ProjectionServiceImpl implements ProjectionService {
     private ProjectionSummary makeSummary(final ActionList actions,
                                           final User user,
                                           final AtomicInteger loreDust,
+                                          final AtomicInteger balance,
                                           final InventoryProjection inventory,
                                           final AtomicInteger score) {
         final var summary = new ProjectionSummary(actions);
@@ -186,6 +197,7 @@ public class ProjectionServiceImpl implements ProjectionService {
         summary.put("Score", new Change(user.getScore(), score.get()));
         summary.put("Cartes normales", new Change(oldInventory.getNormalCount(), inventory.getNormalCount()));
         summary.put("Cartes dorées", new Change(oldInventory.getGoldenCount(), inventory.getGoldenCount()));
+        summary.put("Z Monnaie", new Change(user.getBalance(), balance.get()));
 
         return summary;
     }

@@ -1,5 +1,7 @@
 package me.alexpresso.zuninja.classes.projection;
 
+import java.util.Optional;
+
 public class Action {
     private final ActionType type;
     private final ActionElement target;
@@ -15,7 +17,7 @@ public class Action {
         return type;
     }
 
-    public ActionElement getTarget() {
-        return target;
+    public Optional<ActionElement> getTarget() {
+        return Optional.ofNullable(this.target);
     }
 }

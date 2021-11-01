@@ -3,6 +3,7 @@ package me.alexpresso.zuninja.services.advise;
 import club.minnced.discord.webhook.send.WebhookEmbed;
 import club.minnced.discord.webhook.send.WebhookEmbedBuilder;
 import me.alexpresso.zuninja.classes.plugins.ZUNinjaPlugin;
+import me.alexpresso.zuninja.classes.projection.ActionElement;
 import me.alexpresso.zuninja.exceptions.NodeNotFoundException;
 import me.alexpresso.zuninja.repositories.UserRepository;
 import me.alexpresso.zuninja.services.dispatch.DispatchService;
@@ -39,7 +40,7 @@ public class AdviceServiceImpl implements AdviceService {
 
         final var summary = this.projectionService.makeProjectionsFor(discordTag);
         final var cmds = summary.getActions().stream()
-            .map(a -> String.format("!%s %s", a.getType().getCommand(), a.getTarget().getIdentifier()))
+            .map(a -> String.format("!%s %s", a.getType().getCommand(), a.getTarget().map(ActionElement::getIdentifier).orElse("")))
             .collect(Collectors.joining("\n"));
 
         if(!cmds.isEmpty()) {
