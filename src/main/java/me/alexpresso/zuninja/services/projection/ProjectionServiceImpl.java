@@ -13,6 +13,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -89,11 +90,11 @@ public class ProjectionServiceImpl implements ProjectionService {
                 if(p.getDoability() >= 100)
                     this.solvedFusion(actions, p, score);
                 else
-                    this.tryFillMissing(actions, p, loreDust);
+                    this.tryFillMissing(actions, p, loreDust, score);
             });
     }
 
-    private void tryFillMissing(final ActionList actions, final FusionProjection projection, final AtomicInteger loreDust) {
+    private void tryFillMissing(final ActionList actions, final FusionProjection projection, final AtomicInteger loreDust, final AtomicInteger score) {
         final var cost = new AtomicInteger(0);
         final var craftable = new AtomicInteger(0);
 
@@ -114,7 +115,7 @@ public class ProjectionServiceImpl implements ProjectionService {
         //TODO: Wait for items to have "craftable" property
         if(loreDust.get() > cost.get() && craftable.get() == projection.getMissingItems().size()) {
             projection.getMissingItems().forEach((i, q) -> {
-                this.produceItem(projection.getSharedInventory(), i, q);
+                this.produceItem(projection.getSharedInventory(), i, q, score, projection.isGolden());
 
                 actions.addElement(ActionType.CRAFT, i, q);
                 if(projection.isGolden()) {
@@ -128,12 +129,25 @@ public class ProjectionServiceImpl implements ProjectionService {
 
     private void solvedFusion(final ActionList actions, final FusionProjection projection, final AtomicInteger score) {
         try {
-            projection.consumeInputs().setSolved(true);
-            actions.addElement(new Action(ActionType.FUSION, projection));
+            final var toConsume = new HashMap<ItemProjection, Integer>(); //<Item, quantity>
+            for(var input : projection.getFusion().getInputs()) {
+                if(!projection.getSharedInventory().containsKey(input.getItem().getId()))
+                    throw new ProjectionException("No no no, you have no inventory entry for that item.");
 
-            this.produceItem(projection.getSharedInventory(), projection.getFusion().getResult(), 1);
+                final var iProj = projection.getSharedInventory().get(input.getItem().getId());
+                if(iProj.getQuantity() < input.getQuantity())
+                    throw new ProjectionException("Not enough available items.");
+
+                toConsume.put(iProj, input.getQuantity());
+            }
+
+            toConsume.forEach((i, q) -> this.consumeItem(projection.getSharedInventory(), i.getItem(), q, score, projection.isGolden()));
+            this.produceItem(projection.getSharedInventory(), projection.getFusion().getResult(), 1, score, projection.isGolden());
 
             score.getAndAdd(projection.getProfit());
+            projection.setSolved(true);
+            actions.addElement(new Action(ActionType.FUSION, projection));
+
             logger.debug("Solved fusion {}", projection.getIdentifier());
         } catch (ProjectionException e) {
             logger.debug("Cannot consume inputs, a previous fusion may already have consumed one of these.");
@@ -145,13 +159,11 @@ public class ProjectionServiceImpl implements ProjectionService {
             final var cost = item.getItem().getRarityMetadata().getEnchantValue();
 
             if(!inventory.getGoldenInventory().containsKey(id) && item.getQuantity() > 0 && loreDust.get() > cost) {
-                this.produceItem(inventory.getGoldenInventory(), item.getItem());
-                this.consumeItem(inventory.getNormalInventory(), item.getItem());
+                this.consumeItem(inventory.getNormalInventory(), item.getItem(), score, false);
+                this.produceItem(inventory.getGoldenInventory(), item.getItem(), score, true);
 
                 actions.addElement(new Action(ActionType.ENCHANT, item));
-
                 loreDust.set(loreDust.get() - cost);
-                score.getAndAdd(item.getItem().getRarityMetadata().getEnchantValue());
             }
         });
     }
@@ -171,25 +183,32 @@ public class ProjectionServiceImpl implements ProjectionService {
         }
     }
 
-    private void consumeItem(final Map<String, ItemProjection> inventory, final Item item) {
-        this.consumeItem(inventory, item, 1);
+    private void consumeItem(final Map<String, ItemProjection> inventory, final Item item, final AtomicInteger score, final boolean golden) {
+        this.consumeItem(inventory, item, 1, score, golden);
     }
-    private void consumeItem(final Map<String, ItemProjection> inventory, final Item item, final int quantity) {
+    private void consumeItem(final Map<String, ItemProjection> inventory, final Item item, final int quantity, final AtomicInteger score, final boolean golden) {
         if(!inventory.containsKey(item.getId()))
             return;
 
         final var projection = inventory.get(item.getId());
         projection.consume(quantity);
+
+        if (projection.getQuantity() == 0)
+            score.set(score.get() - (golden ? item.getScoreGolden() : item.getScore()));
     }
 
-    private void produceItem(final Map<String, ItemProjection> inventory, final Item item) {
-        this.produceItem(inventory, item, 1);
+    private void produceItem(final Map<String, ItemProjection> inventory, final Item item, final AtomicInteger score, final boolean golden) {
+        this.produceItem(inventory, item, 1, score, golden);
     }
-    private void produceItem(final Map<String, ItemProjection> inventory, final Item item, final int quantity) {
+    private void produceItem(final Map<String, ItemProjection> inventory, final Item item, final int quantity, final AtomicInteger score, final boolean golden) {
         final var projection = inventory.getOrDefault(item.getId(), new ItemProjection(item, 0));
+        final var wasEmpty = projection.getQuantity() == 0;
 
         projection.produce(quantity);
         inventory.put(item.getId(), projection);
+
+        if(wasEmpty)
+            score.getAndAdd(golden ? item.getScoreGolden() : item.getScore());
     }
 
     private ProjectionSummary makeSummary(final ActionList actions,
