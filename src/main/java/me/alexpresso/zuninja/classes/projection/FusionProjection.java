@@ -47,24 +47,6 @@ public class FusionProjection implements ActionElement {
         return this.golden;
     }
 
-    public FusionProjection consumeInputs() throws ProjectionException {
-        final var projections = new HashMap<ItemProjection, Integer>();
-
-        for(var input : this.fusion.getInputs()) {
-            if(!this.sharedInventory.containsKey(input.getItem().getId()))
-                throw new ProjectionException("No no no, you have no inventory entry for that item.");
-
-            final var iProjection = this.sharedInventory.get(input.getItem().getId());
-            if(iProjection.getQuantity() < input.getQuantity())
-                throw new ProjectionException("Not enough available items.");
-
-            projections.put(iProjection, input.getQuantity());
-        }
-
-        projections.forEach(ItemProjection::consume);
-        return this;
-    }
-
     public Map<Item, Integer> getMissingItems() {
         final var missing = new HashMap<Item, Integer>();
 
