@@ -63,6 +63,7 @@ public class ProjectionServiceImpl implements ProjectionService {
         this.projectFusions(actions, loreDust, score, inventory.getGoldenInventory(), true, goldenFusions);
         this.projectUpgrades(actions, loreDust, score, inventory);
         this.projectInvocation(actions, balance);
+        this.projectAscension(actions, loreDust);
 
         if(actions.hasChanged())
             this.project(actions.newCycle(), loreDust, score, balance, inventory, normalFusions, goldenFusions);
@@ -163,7 +164,7 @@ public class ProjectionServiceImpl implements ProjectionService {
         }
     }
 
-    private void projectionAscension(final ActionList actions, final AtomicInteger loreDust) {
+    private void projectAscension(final ActionList actions, final AtomicInteger loreDust) {
         if(loreDust.get() >= 20) {
             actions.addElement(new Action(ActionType.ASCENSION, null));
             loreDust.set(loreDust.get() - 20);
