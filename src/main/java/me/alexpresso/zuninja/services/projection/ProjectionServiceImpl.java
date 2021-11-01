@@ -163,6 +163,13 @@ public class ProjectionServiceImpl implements ProjectionService {
         }
     }
 
+    private void projectionAscension(final ActionList actions, final AtomicInteger loreDust) {
+        if(loreDust.get() >= 20) {
+            actions.addElement(new Action(ActionType.ASCENSION, null));
+            loreDust.set(loreDust.get() - 20);
+        }
+    }
+
     private void consumeItem(final Map<String, ItemProjection> inventory, final Item item) {
         this.consumeItem(inventory, item, 1);
     }

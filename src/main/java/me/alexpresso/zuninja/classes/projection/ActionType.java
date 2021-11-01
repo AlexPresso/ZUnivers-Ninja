@@ -5,7 +5,8 @@ public enum ActionType {
     CRAFT("creation"),
     ENCHANT("enchantment"),
     FUSION("fusion"),
-    INVOCATION("im");
+    INVOCATION("im"),
+    ASCENSION("as");
 
     private final String command;
 
