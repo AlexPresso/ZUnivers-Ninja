@@ -1,5 +1,6 @@
 package me.alexpresso.zuninja.services.item;
 
+import me.alexpresso.zuninja.classes.ItemDetail;
 import me.alexpresso.zuninja.domain.nodes.item.Fusion;
 import me.alexpresso.zuninja.domain.nodes.item.Item;
 
@@ -9,6 +10,8 @@ import java.util.Map;
 
 public interface ItemService {
     List<Item> fetchItems() throws IOException, InterruptedException;
+
+    ItemDetail fetchItemDetail(Item item) throws IOException, InterruptedException;
 
     List<Item> getItems();
 

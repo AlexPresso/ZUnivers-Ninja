@@ -1,6 +1,7 @@
 package me.alexpresso.zuninja.services.item;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import me.alexpresso.zuninja.classes.ItemDetail;
 import me.alexpresso.zuninja.domain.nodes.item.Fusion;
 import me.alexpresso.zuninja.domain.nodes.item.Item;
 import me.alexpresso.zuninja.domain.nodes.item.Pack;
@@ -45,6 +46,11 @@ public class ItemServiceImpl implements ItemService {
     }
 
     @Override
+    public ItemDetail fetchItemDetail(final Item item) throws IOException, InterruptedException {
+        return (ItemDetail) this.requestService.request(String.format("/public/item/%s", item.getSlug()), "GET", new TypeReference<ItemDetail>(){});
+    }
+
+    @Override
     public List<Item> getItems() {
         return this.itemRepository.findAll();
     }
@@ -63,13 +69,25 @@ public class ItemServiceImpl implements ItemService {
             .filter(StreamUtils.distinctByKey(Pack::getId))
             .collect(Collectors.toMap(Pack::getId, p -> dbPacks.getOrDefault(p.getId(), p).setName(p.getName()).setCraftable(p.getName().equalsIgnoreCase("vanilla"))));
 
-        items.forEach(i -> dbItems.put(i.getId(), dbItems.getOrDefault(i.getId(), i)
-            .setPack(packs.get(i.getPack().getId()))
-            .setGenre(i.getGenre())
-            .setName(i.getName())
-            .setRarity(i.getRarity())
-            .setSlug(i.getSlug())
-        ));
+        for(var i : items) {
+            final var detail = this.fetchItemDetail(i);
+
+            dbItems.put(i.getId(), dbItems.getOrDefault(i.getId(), i)
+                .setPack(packs.get(i.getPack().getId()))
+                .setGenre(i.getGenre())
+                .setName(i.getName())
+                .setRarity(i.getRarity())
+                .setSlug(i.getSlug())
+                .setCounting(detail.isCounting())
+                .setCraftable(detail.isCraftable())
+                .setInvocable(detail.isInvocable())
+                .setRecyclable(detail.isRecyclable())
+                .setTradable(detail.isTradable())
+                .setUpgradable(detail.isUpgradable())
+            );
+
+            logger.info("Updated {}", i.getName());
+        }
 
         this.itemRepository.saveAll(dbItems.values());
         logger.debug("Updated items.");

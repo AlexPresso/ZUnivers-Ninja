@@ -17,6 +17,12 @@ import java.util.Set;
 public class Item extends BaseGraphObject implements ActionElement {
     @Relationship(type = "INVENTORY_ITEM", direction = Relationship.Direction.INCOMING)
     private Set<InventoryItem> inventories = new HashSet<>();
+    @Relationship(type = "HOLDS", direction = Relationship.Direction.INCOMING)
+    private Pack pack;
+    @Relationship(type = "FUSION_INPUT", direction = Relationship.Direction.OUTGOING)
+    private Set<InputToFusion> inputOfFusions = new HashSet<>();
+    @Relationship(type = "FUSION_RESULT", direction = Relationship.Direction.INCOMING)
+    private Set<Fusion> resultOfFusions = new HashSet<>();
     @JsonProperty("identifier")
     private Long itemIdentifier;
     private String name;
@@ -26,12 +32,13 @@ public class Item extends BaseGraphObject implements ActionElement {
     private Set<String> urls;
     private int score;
     private int scoreGolden;
-    @Relationship(type = "HOLDS", direction = Relationship.Direction.INCOMING)
-    private Pack pack;
-    @Relationship(type = "FUSION_INPUT", direction = Relationship.Direction.OUTGOING)
-    private Set<InputToFusion> inputOfFusions = new HashSet<>();
-    @Relationship(type = "FUSION_RESULT", direction = Relationship.Direction.INCOMING)
-    private Set<Fusion> resultOfFusions = new HashSet<>();
+    private boolean counting;
+    private boolean craftable;
+    private boolean invocable;
+    private boolean recyclable;
+    private boolean tradable;
+    private boolean upgradable;
+
 
     public Long getItemIdentifier() {
         return itemIdentifier;
@@ -132,6 +139,60 @@ public class Item extends BaseGraphObject implements ActionElement {
 
     public void setScoreGolden(int scoreGolden) {
         this.scoreGolden = scoreGolden;
+    }
+
+    public boolean isCounting() {
+        return counting;
+    }
+
+    public Item setCounting(boolean counting) {
+        this.counting = counting;
+        return this;
+    }
+
+    public boolean isCraftable() {
+        return craftable;
+    }
+
+    public Item setCraftable(boolean craftable) {
+        this.craftable = craftable;
+        return this;
+    }
+
+    public boolean isInvocable() {
+        return invocable;
+    }
+
+    public Item setInvocable(boolean invocable) {
+        this.invocable = invocable;
+        return this;
+    }
+
+    public boolean isRecyclable() {
+        return recyclable;
+    }
+
+    public Item setRecyclable(boolean recyclable) {
+        this.recyclable = recyclable;
+        return this;
+    }
+
+    public boolean isTradable() {
+        return tradable;
+    }
+
+    public Item setTradable(boolean tradable) {
+        this.tradable = tradable;
+        return this;
+    }
+
+    public boolean isUpgradable() {
+        return upgradable;
+    }
+
+    public Item setUpgradable(boolean upgradable) {
+        this.upgradable = upgradable;
+        return this;
     }
 
     @Override
