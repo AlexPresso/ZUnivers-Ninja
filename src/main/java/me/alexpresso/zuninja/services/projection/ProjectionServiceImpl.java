@@ -175,11 +175,12 @@ public class ProjectionServiceImpl implements ProjectionService {
     }
 
     private void projectInvocation(final ActionList actions, final AtomicInteger balance, final Set<Event> activeEvents) {
-        final var event = Optional.ofNullable(activeEvents.iterator().next());
-        final int cost = event.map(Event::getBalanceCost).orElse(1000);
+        final var event = activeEvents.iterator().hasNext() ?
+            activeEvents.iterator().next() : null;
+        final int cost = event != null ? event.getBalanceCost() : 1000;
 
         if(balance.get() >= cost) {
-            actions.addElement(new Action(ActionType.INVOCATION, event.orElse(null)));
+            actions.addElement(new Action(ActionType.INVOCATION, event));
             balance.set(balance.get() - cost);
         }
     }
