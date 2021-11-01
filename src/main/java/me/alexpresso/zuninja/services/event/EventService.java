@@ -10,5 +10,5 @@ public interface EventService {
 
     List<Event> getEvents();
 
-    void updateEvents();
+    void updateEvents() throws IOException, InterruptedException;
 }

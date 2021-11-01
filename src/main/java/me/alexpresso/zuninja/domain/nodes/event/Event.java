@@ -1,55 +1,65 @@
 package me.alexpresso.zuninja.domain.nodes.event;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.datatype.jsr310.deser.LocalDateTimeDeserializer;
+import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer;
 import me.alexpresso.zuninja.classes.projection.ActionElement;
 import me.alexpresso.zuninja.domain.base.BaseGraphObject;
-import me.alexpresso.zuninja.domain.nodes.item.Pack;
 import org.springframework.data.neo4j.core.schema.Node;
-import org.springframework.data.neo4j.core.schema.Relationship;
+
+import java.time.LocalDateTime;
 
 @Node
 public class Event extends BaseGraphObject implements ActionElement {
-    @Relationship(type = "EVENT_PACK", direction = Relationship.Direction.OUTGOING)
-    private Pack pack;
+
     private int balanceCost;
     private String name;
-    @JsonProperty("id")
-    private String eventId;
-
-    public Pack getPack() {
-        return pack;
-    }
-
-    public void setPack(Pack pack) {
-        this.pack = pack;
-    }
+    @JsonSerialize(using = LocalDateTimeSerializer.class)
+    @JsonDeserialize(using = LocalDateTimeDeserializer.class)
+    private LocalDateTime beginDate;
+    @JsonSerialize(using = LocalDateTimeSerializer.class)
+    @JsonDeserialize(using = LocalDateTimeDeserializer.class)
+    private LocalDateTime endDate;
 
     public int getBalanceCost() {
         return balanceCost;
     }
 
-    public void setBalanceCost(int balanceCost) {
+    public Event setBalanceCost(int balanceCost) {
         this.balanceCost = balanceCost;
+        return this;
     }
 
     public String getName() {
         return name;
     }
 
-    public void setName(String name) {
+    public Event setName(String name) {
         this.name = name;
+        return this;
     }
 
-    public String getEventId() {
-        return eventId;
+    public LocalDateTime getBeginDate() {
+        return beginDate;
     }
 
-    public void setEventId(String eventId) {
-        this.eventId = eventId;
+    public Event setBeginDate(LocalDateTime beginDate) {
+        this.beginDate = beginDate;
+        return this;
+    }
+
+    public LocalDateTime getEndDate() {
+        return endDate;
+    }
+
+    public Event setEndDate(LocalDateTime endDate) {
+        this.endDate = endDate;
+        return this;
     }
 
     @Override
     public String getIdentifier() {
-        return this.eventId;
+        return this.name;
     }
 }

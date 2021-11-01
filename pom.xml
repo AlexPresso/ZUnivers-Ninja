@@ -6,7 +6,7 @@
 
     <groupId>me.alexpresso</groupId>
     <artifactId>zunivers-ninja</artifactId>
-    <version>1.1.2</version>
+    <version>1.1.5</version>
 
     <properties>
         <maven.compiler.source>11</maven.compiler.source>
@@ -50,6 +50,11 @@
             <artifactId>pf4j-spring</artifactId>
             <version>${pf4j-spring.version}</version>
             <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.datatype</groupId>
+            <artifactId>jackson-datatype-jsr310</artifactId>
+            <version>2.13.0</version>
         </dependency>
     </dependencies>
 

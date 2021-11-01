@@ -2,20 +2,20 @@ package me.alexpresso.zuninja.services.projection;
 
 import me.alexpresso.zuninja.classes.Change;
 import me.alexpresso.zuninja.classes.projection.*;
+import me.alexpresso.zuninja.domain.nodes.event.Event;
 import me.alexpresso.zuninja.domain.nodes.item.Item;
 import me.alexpresso.zuninja.domain.nodes.user.User;
 import me.alexpresso.zuninja.exceptions.NodeNotFoundException;
 import me.alexpresso.zuninja.exceptions.ProjectionException;
+import me.alexpresso.zuninja.repositories.EventRepository;
 import me.alexpresso.zuninja.repositories.FusionRepository;
 import me.alexpresso.zuninja.services.user.UserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
+import java.time.LocalDateTime;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
@@ -27,11 +27,13 @@ public class ProjectionServiceImpl implements ProjectionService {
 
     private final FusionRepository fusionRepository;
     private final UserService userService;
+    private final EventRepository eventRepository;
 
 
-    public ProjectionServiceImpl(final FusionRepository fr, final UserService us) {
+    public ProjectionServiceImpl(final FusionRepository fr, final UserService us, final EventRepository er) {
         this.fusionRepository = fr;
         this.userService = us;
+        this.eventRepository = er;
     }
 
 
@@ -47,8 +49,9 @@ public class ProjectionServiceImpl implements ProjectionService {
         final var score = new AtomicInteger(user.getScore());
         final var normalFusions = new AtomicReference<Set<FusionProjection>>(null);
         final var goldenFusions = new AtomicReference<Set<FusionProjection>>(null);
+        final var activeEvents = this.eventRepository.findEventsAtDate(LocalDateTime.now());
 
-        this.project(actions, loreDust, score, balance, inventory, normalFusions, goldenFusions);
+        this.project(actions, loreDust, score, balance, inventory, normalFusions, goldenFusions, activeEvents);
 
         return this.makeSummary(actions, user, loreDust, balance, inventory, score);
     }
@@ -59,15 +62,16 @@ public class ProjectionServiceImpl implements ProjectionService {
                          final AtomicInteger balance,
                          final InventoryProjection inventory,
                          final AtomicReference<Set<FusionProjection>> normalFusions,
-                         final AtomicReference<Set<FusionProjection>> goldenFusions) {
+                         final AtomicReference<Set<FusionProjection>> goldenFusions,
+                         final Set<Event> activeEvents) {
         this.projectFusions(actions, loreDust, score, inventory.getNormalInventory(), false, normalFusions);
         this.projectFusions(actions, loreDust, score, inventory.getGoldenInventory(), true, goldenFusions);
         this.projectUpgrades(actions, loreDust, score, inventory);
-        this.projectInvocation(actions, balance);
+        this.projectInvocation(actions, balance, activeEvents);
         this.projectAscension(actions, loreDust);
 
         if(actions.hasChanged())
-            this.project(actions.newCycle(), loreDust, score, balance, inventory, normalFusions, goldenFusions);
+            this.project(actions.newCycle(), loreDust, score, balance, inventory, normalFusions, goldenFusions, activeEvents);
     }
 
     private void projectFusions(final ActionList actions,
@@ -168,11 +172,13 @@ public class ProjectionServiceImpl implements ProjectionService {
         });
     }
 
-    private void projectInvocation(final ActionList actions, final AtomicInteger balance) {
-        if(balance.get() >= 1000) {
-            //TODO: Prioritize event when there's one (put it in target)
-            actions.addElement(new Action(ActionType.INVOCATION, null));
-            balance.set(balance.get() - 1000);
+    private void projectInvocation(final ActionList actions, final AtomicInteger balance, final Set<Event> activeEvents) {
+        final var event = Optional.ofNullable(activeEvents.iterator().next());
+        final int cost = event.map(Event::getBalanceCost).orElse(1000);
+
+        if(balance.get() >= cost) {
+            actions.addElement(new Action(ActionType.INVOCATION, event.orElse(null)));
+            balance.set(balance.get() - cost);
         }
     }
 
