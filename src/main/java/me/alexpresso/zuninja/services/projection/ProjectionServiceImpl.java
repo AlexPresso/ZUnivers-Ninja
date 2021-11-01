@@ -110,13 +110,12 @@ public class ProjectionServiceImpl implements ProjectionService {
                 cost.getAndAdd(i.getRarityMetadata().getBaseCraftValue() * q);
             }
 
-            if(i.getPack().isCraftable())
+            if(i.isCraftable())
                 craftable.incrementAndGet();
 
             //TODO: can input be made by another cheaper fusion ?
         });
 
-        //TODO: Wait for items to have "craftable" property
         if(loreDust.get() > cost.get() && craftable.get() == projection.getMissingItems().size()) {
             projection.getMissingItems().forEach((i, q) -> {
                 this.produceItem(projection.getSharedInventory(), i, q, score, projection.isGolden());
@@ -159,14 +158,17 @@ public class ProjectionServiceImpl implements ProjectionService {
     }
 
     private void projectUpgrades(final ActionList actions, final AtomicInteger loreDust, final AtomicInteger score, final InventoryProjection inventory) {
-        inventory.getNormalInventory().forEach((id, item) -> {
-            final var cost = item.getItem().getRarityMetadata().getEnchantValue();
+        inventory.getNormalInventory().forEach((id, itemProj) -> {
+            if(!itemProj.getItem().isUpgradable())
+                return;
 
-            if(!inventory.getGoldenInventory().containsKey(id) && item.getQuantity() > 0 && loreDust.get() > cost) {
-                this.consumeItem(inventory.getNormalInventory(), item.getItem(), score, false);
-                this.produceItem(inventory.getGoldenInventory(), item.getItem(), score, true);
+            final var cost = itemProj.getItem().getRarityMetadata().getEnchantValue();
 
-                actions.addElement(new Action(ActionType.ENCHANT, item));
+            if(!inventory.getGoldenInventory().containsKey(id) && itemProj.getQuantity() > 0 && loreDust.get() > cost) {
+                this.consumeItem(inventory.getNormalInventory(), itemProj.getItem(), score, false);
+                this.produceItem(inventory.getGoldenInventory(), itemProj.getItem(), score, true);
+
+                actions.addElement(new Action(ActionType.ENCHANT, itemProj));
                 loreDust.set(loreDust.get() - cost);
             }
         });
