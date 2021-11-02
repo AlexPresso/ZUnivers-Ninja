@@ -69,15 +69,16 @@ public class ItemServiceImpl implements ItemService {
             .filter(StreamUtils.distinctByKey(Pack::getId))
             .collect(Collectors.toMap(Pack::getId, p -> dbPacks.getOrDefault(p.getId(), p).setName(p.getName()).setCraftable(p.getName().equalsIgnoreCase("vanilla"))));
 
-        for(var i : items) {
-            final var detail = this.fetchItemDetail(i);
+        for(var i = 0; i < items.size(); i++) {
+            final var item = items.get(i);
+            final var detail = this.fetchItemDetail(item);
 
-            dbItems.put(i.getId(), dbItems.getOrDefault(i.getId(), i)
-                .setPack(packs.get(i.getPack().getId()))
-                .setGenre(i.getGenre())
-                .setName(i.getName())
-                .setRarity(i.getRarity())
-                .setSlug(i.getSlug())
+            dbItems.put(item.getId(), dbItems.getOrDefault(item.getId(), item)
+                .setPack(packs.get(item.getPack().getId()))
+                .setGenre(item.getGenre())
+                .setName(item.getName())
+                .setRarity(item.getRarity())
+                .setSlug(item.getSlug())
                 .setCounting(detail.isCounting())
                 .setCraftable(detail.isCraftable())
                 .setInvocable(detail.isInvocable())
@@ -86,7 +87,7 @@ public class ItemServiceImpl implements ItemService {
                 .setUpgradable(detail.isUpgradable())
             );
 
-            logger.info("Updated {}", i.getName());
+            logger.info("({}/{}) Updated {} ", i+1, items.size(), item.getName());
         }
 
         this.itemRepository.saveAll(dbItems.values());

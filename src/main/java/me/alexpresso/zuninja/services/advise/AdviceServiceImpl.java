@@ -4,6 +4,7 @@ import club.minnced.discord.webhook.send.WebhookEmbed;
 import club.minnced.discord.webhook.send.WebhookEmbedBuilder;
 import me.alexpresso.zuninja.classes.plugins.ZUNinjaPlugin;
 import me.alexpresso.zuninja.classes.projection.ActionElement;
+import me.alexpresso.zuninja.classes.MemoryCache;
 import me.alexpresso.zuninja.exceptions.NodeNotFoundException;
 import me.alexpresso.zuninja.repositories.UserRepository;
 import me.alexpresso.zuninja.services.dispatch.DispatchService;
@@ -24,13 +25,16 @@ public class AdviceServiceImpl implements AdviceService {
     private final DispatchService dispatchService;
     private final UserRepository userRepository;
     private final PluginManager pluginManager;
+    private final MemoryCache memoryCache;
 
+    private static final String CMDS_CACHE_KEY = "lastDispatchedCmds";
 
-    public AdviceServiceImpl(final ProjectionService ps, final DispatchService ds, final UserRepository ur, final PluginManager pm) {
+    public AdviceServiceImpl(final ProjectionService ps, final DispatchService ds, final UserRepository ur, final PluginManager pm, final MemoryCache mc) {
         this.projectionService = ps;
         this.dispatchService = ds;
         this.userRepository = ur;
         this.pluginManager = pm;
+        this.memoryCache = mc;
     }
 
 
@@ -43,7 +47,9 @@ public class AdviceServiceImpl implements AdviceService {
             .map(a -> String.format("!%s %s", a.getType().getCommand(), a.getTarget().map(ActionElement::getIdentifier).orElse("")))
             .collect(Collectors.joining("\n"));
 
-        if(!cmds.isEmpty()) {
+        if(!cmds.isEmpty() && !this.memoryCache.get(CMDS_CACHE_KEY).equals(cmds)) {
+            this.memoryCache.put(CMDS_CACHE_KEY, cmds);
+
             final var discordId = this.userRepository.findDiscordIdByTag(discordTag)
                 .orElseThrow(() -> new NodeNotFoundException("This user doesn't exist."));
 
