@@ -1,6 +1,6 @@
 package me.alexpresso.zuninja;
 
-import me.alexpresso.zuninja.classes.MemoryCache;
+import me.alexpresso.zuninja.classes.cache.MemoryCache;
 import org.pf4j.spring.SpringPluginManager;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

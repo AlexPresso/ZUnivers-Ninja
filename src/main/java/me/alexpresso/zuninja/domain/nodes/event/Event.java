@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.datatype.jsr310.deser.LocalDateTimeDeserializer;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer;
-import me.alexpresso.zuninja.classes.projection.ActionElement;
+import me.alexpresso.zuninja.classes.projection.action.ActionElement;
 import me.alexpresso.zuninja.domain.base.BaseGraphObject;
 import org.springframework.data.neo4j.core.schema.Node;
 
