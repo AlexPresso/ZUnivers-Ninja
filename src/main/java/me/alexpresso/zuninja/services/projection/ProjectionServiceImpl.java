@@ -67,7 +67,7 @@ public class ProjectionServiceImpl implements ProjectionService {
         this.projectRecycle(actions, state, true);
         this.recursiveProjection(actions, state);
 
-        this.memoryCache.put(CacheEntry.LAST_ADVICE_DATE, LocalDateTime.now())
+        this.memoryCache.put(CacheEntry.LAST_ADVICE_DATE, LocalDate.now())
             .put(CacheEntry.TODAY_ASCENSIONS, state.getAscensionsCount());
 
         return this.makeSummary(actions, user, state);
