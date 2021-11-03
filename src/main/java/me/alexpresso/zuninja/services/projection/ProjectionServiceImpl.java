@@ -5,8 +5,10 @@ import me.alexpresso.zuninja.classes.cache.CacheEntry;
 import me.alexpresso.zuninja.classes.cache.MemoryCache;
 import me.alexpresso.zuninja.classes.projection.*;
 import me.alexpresso.zuninja.classes.projection.action.Action;
+import me.alexpresso.zuninja.classes.projection.action.ActionElementList;
 import me.alexpresso.zuninja.classes.projection.action.ActionList;
 import me.alexpresso.zuninja.classes.projection.action.ActionType;
+import me.alexpresso.zuninja.classes.projection.recycle.RecycleElement;
 import me.alexpresso.zuninja.domain.nodes.item.Item;
 import me.alexpresso.zuninja.domain.nodes.user.User;
 import me.alexpresso.zuninja.exceptions.NodeNotFoundException;
@@ -211,7 +213,7 @@ public class ProjectionServiceImpl implements ProjectionService {
 
     private void projectRecycle(final ActionList actions, final ProjectionState state, final boolean golden) {
         //TODO: Recycle only items which are not input of fusion OR all fusion's results using this item are already in inventory
-        final var toRecycle = new RecycleList();
+        final var toRecycle = new ActionElementList();
         final var inventory = golden ? state.getInventory().getGoldenInventory() :
             state.getInventory().getNormalInventory();
 
@@ -224,7 +226,7 @@ public class ProjectionServiceImpl implements ProjectionService {
 
                 this.consumeItem(state, iProj.getItem(), count, true);
                 state.getLoreDust().getAndAdd(recycleValue);
-                toRecycle.add(iProj.getItem(), count);
+                toRecycle.add(new RecycleElement(iProj.getItem(), golden), count);
             });
 
         if(!toRecycle.isEmpty())
