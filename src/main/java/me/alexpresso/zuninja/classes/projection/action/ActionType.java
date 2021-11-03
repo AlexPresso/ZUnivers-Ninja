@@ -1,4 +1,4 @@
-package me.alexpresso.zuninja.classes.projection;
+package me.alexpresso.zuninja.classes.projection.action;
 
 public enum ActionType {
     RECYCLE("recyclage"),

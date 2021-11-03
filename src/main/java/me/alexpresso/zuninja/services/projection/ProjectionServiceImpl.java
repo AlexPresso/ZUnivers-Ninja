@@ -1,8 +1,12 @@
 package me.alexpresso.zuninja.services.projection;
 
 import me.alexpresso.zuninja.classes.Change;
+import me.alexpresso.zuninja.classes.cache.CacheEntry;
+import me.alexpresso.zuninja.classes.cache.MemoryCache;
 import me.alexpresso.zuninja.classes.projection.*;
-import me.alexpresso.zuninja.domain.nodes.event.Event;
+import me.alexpresso.zuninja.classes.projection.action.Action;
+import me.alexpresso.zuninja.classes.projection.action.ActionList;
+import me.alexpresso.zuninja.classes.projection.action.ActionType;
 import me.alexpresso.zuninja.domain.nodes.item.Item;
 import me.alexpresso.zuninja.domain.nodes.user.User;
 import me.alexpresso.zuninja.exceptions.NodeNotFoundException;
@@ -14,10 +18,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 @Service
@@ -28,58 +32,61 @@ public class ProjectionServiceImpl implements ProjectionService {
     private final FusionRepository fusionRepository;
     private final UserService userService;
     private final EventRepository eventRepository;
+    private final MemoryCache memoryCache;
+
+    private final static int ASCENSION_COST = 20;
+    private final static int PER_DAY_ASCENSIONS = 2;
 
 
-    public ProjectionServiceImpl(final FusionRepository fr, final UserService us, final EventRepository er) {
+    public ProjectionServiceImpl(final FusionRepository fr, final UserService us, final EventRepository er, final MemoryCache mc) {
         this.fusionRepository = fr;
         this.userService = us;
         this.eventRepository = er;
+        this.memoryCache = mc;
     }
 
 
     @Override
-    public ProjectionSummary makeProjectionsFor(String discordTag) throws NodeNotFoundException {
+    public ProjectionSummary makeProjectionsFor(final String discordTag) throws NodeNotFoundException {
         final var actions = new ActionList();
         final var user = this.userService.getUser(discordTag)
             .orElseThrow(() -> new NodeNotFoundException("This user doesn't exist."));
 
-        final var inventory = new InventoryProjection(user);
-        final var loreDust = new AtomicInteger(user.getLoreDust());
-        final var balance = new AtomicInteger(user.getBalance());
-        final var score = new AtomicInteger(user.getScore());
-        final var normalFusions = new AtomicReference<Set<FusionProjection>>(null);
-        final var goldenFusions = new AtomicReference<Set<FusionProjection>>(null);
         final var activeEvents = this.eventRepository.findEventsAtDate(LocalDateTime.now());
+        final var lastAdvice = (LocalDate) this.memoryCache.getOrDefault(CacheEntry.LAST_ADVICE_DATE, LocalDate.now().minusDays(1));
 
-        this.project(actions, loreDust, score, balance, inventory, normalFusions, goldenFusions, activeEvents);
+        if(lastAdvice.isBefore(LocalDate.now()))
+            this.memoryCache.put(CacheEntry.TODAY_ASCENSIONS, 0);
 
-        return this.makeSummary(actions, user, loreDust, balance, inventory, score);
+        final var todayAscensions = (int) this.memoryCache.getOrDefault(CacheEntry.TODAY_ASCENSIONS, 0);
+        final var state = new ProjectionState(user, activeEvents, todayAscensions);
+
+        this.projectRecycle(actions, state, false);
+        this.projectRecycle(actions, state, true);
+        this.recursiveProjection(actions, state);
+
+        this.memoryCache.put(CacheEntry.LAST_ADVICE_DATE, LocalDateTime.now())
+            .put(CacheEntry.TODAY_ASCENSIONS, state.getAscensionsCount());
+
+        return this.makeSummary(actions, user, state);
     }
 
-    private void project(final ActionList actions,
-                         final AtomicInteger loreDust,
-                         final AtomicInteger score,
-                         final AtomicInteger balance,
-                         final InventoryProjection inventory,
-                         final AtomicReference<Set<FusionProjection>> normalFusions,
-                         final AtomicReference<Set<FusionProjection>> goldenFusions,
-                         final Set<Event> activeEvents) {
-        this.projectFusions(actions, loreDust, score, inventory.getNormalInventory(), false, normalFusions);
-        this.projectFusions(actions, loreDust, score, inventory.getGoldenInventory(), true, goldenFusions);
-        this.projectUpgrades(actions, loreDust, score, inventory);
-        this.projectInvocation(actions, balance, activeEvents);
-        this.projectAscension(actions, loreDust);
+
+    private void recursiveProjection(final ActionList actions, final ProjectionState state) {
+        this.projectFusions(actions, state, false);
+        this.projectFusions(actions, state, true);
+        this.projectUpgrades(actions, state);
+        this.projectInvocation(actions, state);
+        this.projectAscension(actions, state);
 
         if(actions.hasChanged())
-            this.project(actions.newCycle(), loreDust, score, balance, inventory, normalFusions, goldenFusions, activeEvents);
+            this.recursiveProjection(actions.newCycle(), state);
     }
 
-    private void projectFusions(final ActionList actions,
-                                final AtomicInteger loreDust,
-                                final AtomicInteger score,
-                                final Map<String, ItemProjection> inventory,
-                                final boolean golden,
-                                final AtomicReference<Set<FusionProjection>> projections) {
+    private void projectFusions(final ActionList actions, final ProjectionState state, final boolean golden) {
+        final var projections = golden ? state.getGoldenFusions() : state.getNormalFusions();
+        final var inventory = golden ? state.getInventory().getGoldenInventory() : state.getInventory().getNormalInventory();
+
         if(projections.get() == null) {
             final var p =  this.fusionRepository.findAll().stream()
                 .map(f -> new FusionProjection(f, golden, inventory)).collect(Collectors.toSet());
@@ -87,18 +94,24 @@ public class ProjectionServiceImpl implements ProjectionService {
             projections.set(p);
         }
 
+        //if(event == en cours) {
+        //stream().filter(f -> pack == event.pack)
+        //}
+
+        //TODO: allow to redo fusion, only when inputs aren't used by other fusions OR other fusions result is already in inventory (recursive)
+        //TODO: Also prioritize fusions from events if there's one
         projections.get().stream()
             .filter(p -> !p.isSolved() && !inventory.containsKey(p.getFusion().getResult().getId()))
             .sorted(Comparator.comparingDouble(FusionProjection::getDoability).thenComparing(FusionProjection::getProfit).reversed())
             .forEach(p -> {
                 if(p.getDoability() >= 100)
-                    this.solvedFusion(actions, p, score);
+                    this.solvedFusion(actions, p, state);
                 else
-                    this.tryFillMissing(actions, p, loreDust, score);
+                    this.tryFillMissing(actions, p, state);
             });
     }
 
-    private void tryFillMissing(final ActionList actions, final FusionProjection projection, final AtomicInteger loreDust, final AtomicInteger score) {
+    private void tryFillMissing(final ActionList actions, final FusionProjection projection, final ProjectionState state) {
         final var cost = new AtomicInteger(0);
         final var craftable = new AtomicInteger(0);
 
@@ -116,9 +129,9 @@ public class ProjectionServiceImpl implements ProjectionService {
             //TODO: can input be made by another cheaper fusion ?
         });
 
-        if(loreDust.get() > cost.get() && craftable.get() == projection.getMissingItems().size()) {
+        if(state.getLoreDust().get() > cost.get() && craftable.get() == projection.getMissingItems().size()) {
             projection.getMissingItems().forEach((i, q) -> {
-                this.produceItem(projection.getSharedInventory(), i, q, score, projection.isGolden());
+                this.produceItem(state, i, q, projection.isGolden());
 
                 actions.addElement(ActionType.CRAFT, i, q);
                 if(projection.isGolden()) {
@@ -126,11 +139,11 @@ public class ProjectionServiceImpl implements ProjectionService {
                 }
             });
 
-            loreDust.set(loreDust.get() - cost.get());
+            state.getLoreDust().set(state.getLoreDust().get() - cost.get());
         }
     }
 
-    private void solvedFusion(final ActionList actions, final FusionProjection projection, final AtomicInteger score) {
+    private void solvedFusion(final ActionList actions, final FusionProjection projection, final ProjectionState state) {
         try {
             final var toConsume = new HashMap<ItemProjection, Integer>(); //<Item, quantity>
             for(var input : projection.getFusion().getInputs()) {
@@ -144,10 +157,10 @@ public class ProjectionServiceImpl implements ProjectionService {
                 toConsume.put(iProj, input.getQuantity());
             }
 
-            toConsume.forEach((i, q) -> this.consumeItem(projection.getSharedInventory(), i.getItem(), q, score, projection.isGolden()));
-            this.produceItem(projection.getSharedInventory(), projection.getFusion().getResult(), 1, score, projection.isGolden());
+            toConsume.forEach((i, q) -> this.consumeItem(state, i.getItem(), q, projection.isGolden()));
+            this.produceItem(state, projection.getFusion().getResult(), 1, projection.isGolden());
 
-            score.getAndAdd(projection.getProfit());
+            state.getScore().getAndAdd(projection.getProfit());
             projection.setSolved(true);
             actions.addElement(new Action(ActionType.FUSION, projection));
 
@@ -157,45 +170,75 @@ public class ProjectionServiceImpl implements ProjectionService {
         }
     }
 
-    private void projectUpgrades(final ActionList actions, final AtomicInteger loreDust, final AtomicInteger score, final InventoryProjection inventory) {
-        inventory.getNormalInventory().forEach((id, itemProj) -> {
+    private void projectUpgrades(final ActionList actions, final ProjectionState state) {
+        final var normalInv = state.getInventory().getNormalInventory();
+        final var goldenInv = state.getInventory().getGoldenInventory();
+
+        normalInv.forEach((id, itemProj) -> {
             if(!itemProj.getItem().isUpgradable())
                 return;
 
             final var cost = itemProj.getItem().getRarityMetadata().getEnchantValue();
 
-            if(!inventory.getGoldenInventory().containsKey(id) && itemProj.getQuantity() > 0 && loreDust.get() > cost) {
-                this.consumeItem(inventory.getNormalInventory(), itemProj.getItem(), score, false);
-                this.produceItem(inventory.getGoldenInventory(), itemProj.getItem(), score, true);
+            if(!goldenInv.containsKey(id) && itemProj.getQuantity() > 0 && state.getLoreDust().get() > cost) {
+                this.consumeItem(state, itemProj.getItem(), false);
+                this.produceItem(state, itemProj.getItem(), true);
 
                 actions.addElement(new Action(ActionType.ENCHANT, itemProj));
-                loreDust.set(loreDust.get() - cost);
+                state.getLoreDust().set(state.getLoreDust().get() - cost);
             }
         });
     }
 
-    private void projectInvocation(final ActionList actions, final AtomicInteger balance, final Set<Event> activeEvents) {
-        final var event = activeEvents.iterator().hasNext() ?
-            activeEvents.iterator().next() : null;
+    private void projectInvocation(final ActionList actions, final ProjectionState state) {
+        final var event = state.getActiveEvents().iterator().hasNext() ?
+            state.getActiveEvents().iterator().next() : null;
         final int cost = event != null ? event.getBalanceCost() : 1000;
 
-        if(balance.get() >= cost) {
+        if(state.getBalance().get() >= cost) {
             actions.addElement(new Action(ActionType.INVOCATION, event));
-            balance.set(balance.get() - cost);
+            state.getBalance().set(state.getBalance().get() - cost);
         }
     }
 
-    private void projectAscension(final ActionList actions, final AtomicInteger loreDust) {
-        if(loreDust.get() >= 20) {
+    private void projectAscension(final ActionList actions, final ProjectionState state) {
+        if(state.getLoreDust().get() >= ASCENSION_COST && state.getAscensionsCount().get() < PER_DAY_ASCENSIONS) {
             actions.addElement(new Action(ActionType.ASCENSION, null));
-            loreDust.set(loreDust.get() - 20);
+            state.getLoreDust().set(state.getLoreDust().get() - ASCENSION_COST);
+            state.getAscensionsCount().getAndIncrement();
         }
     }
 
-    private void consumeItem(final Map<String, ItemProjection> inventory, final Item item, final AtomicInteger score, final boolean golden) {
-        this.consumeItem(inventory, item, 1, score, golden);
+    private void projectRecycle(final ActionList actions, final ProjectionState state, final boolean golden) {
+        //TODO: Recycle only items which are not input of fusion OR all fusion's results using this item are already in inventory
+        final var toRecycle = new RecycleList();
+        final var inventory = golden ? state.getInventory().getGoldenInventory() :
+            state.getInventory().getNormalInventory();
+
+        inventory.values().stream()
+            .filter(iProj -> iProj.getItem().isRecyclable() && iProj.getQuantity() >= 3)
+            .forEach(iProj -> {
+                final var count = iProj.getQuantity() - 2;
+                final var recycleValue = golden ? iProj.getItem().getRarityMetadata().getGoldenRecycleValue() :
+                    iProj.getItem().getRarityMetadata().getBaseRecycleValue();
+
+                this.consumeItem(state, iProj.getItem(), count, true);
+                state.getLoreDust().getAndAdd(recycleValue);
+                toRecycle.add(iProj.getItem(), count);
+            });
+
+        if(!toRecycle.isEmpty())
+            actions.addElement(new Action(ActionType.RECYCLE, toRecycle));
     }
-    private void consumeItem(final Map<String, ItemProjection> inventory, final Item item, final int quantity, final AtomicInteger score, final boolean golden) {
+
+
+    private void consumeItem(final ProjectionState state, final Item item, final boolean golden) {
+        this.consumeItem(state, item, 1, golden);
+    }
+    private void consumeItem(final ProjectionState state, final Item item, final int quantity, final boolean golden) {
+        final var inventory = golden ? state.getInventory().getGoldenInventory() :
+            state.getInventory().getNormalInventory();
+
         if(!inventory.containsKey(item.getId()))
             return;
 
@@ -203,13 +246,15 @@ public class ProjectionServiceImpl implements ProjectionService {
         projection.consume(quantity);
 
         if (projection.getQuantity() == 0)
-            score.set(score.get() - (golden ? item.getScoreGolden() : item.getScore()));
+            state.getScore().set(state.getScore().get() - (golden ? item.getScoreGolden() : item.getScore()));
     }
 
-    private void produceItem(final Map<String, ItemProjection> inventory, final Item item, final AtomicInteger score, final boolean golden) {
-        this.produceItem(inventory, item, 1, score, golden);
+    private void produceItem(final ProjectionState state, final Item item, final boolean golden) {
+        this.produceItem(state, item, 1, golden);
     }
-    private void produceItem(final Map<String, ItemProjection> inventory, final Item item, final int quantity, final AtomicInteger score, final boolean golden) {
+    private void produceItem(final ProjectionState state, final Item item, final int quantity, final boolean golden) {
+        final var inventory = golden ? state.getInventory().getGoldenInventory() :
+            state.getInventory().getNormalInventory();
         final var projection = inventory.getOrDefault(item.getId(), new ItemProjection(item, 0));
         final var wasEmpty = projection.getQuantity() == 0;
 
@@ -217,23 +262,20 @@ public class ProjectionServiceImpl implements ProjectionService {
         inventory.put(item.getId(), projection);
 
         if(wasEmpty)
-            score.getAndAdd(golden ? item.getScoreGolden() : item.getScore());
+            state.getScore().getAndAdd(golden ? item.getScoreGolden() : item.getScore());
     }
 
-    private ProjectionSummary makeSummary(final ActionList actions,
-                                          final User user,
-                                          final AtomicInteger loreDust,
-                                          final AtomicInteger balance,
-                                          final InventoryProjection inventory,
-                                          final AtomicInteger score) {
+
+    private ProjectionSummary makeSummary(final ActionList actions, final User user, final ProjectionState state) {
         final var summary = new ProjectionSummary(actions);
         final var oldInventory = new InventoryProjection(user);
+        final var newInventory = state.getInventory();
 
-        summary.put("Poussière de lore", new Change(user.getLoreDust(), loreDust.get()));
-        summary.put("Score", new Change(user.getScore(), score.get()));
-        summary.put("Cartes normales", new Change(oldInventory.getNormalCount(), inventory.getNormalCount()));
-        summary.put("Cartes dorées", new Change(oldInventory.getGoldenCount(), inventory.getGoldenCount()));
-        summary.put("Z Monnaie", new Change(user.getBalance(), balance.get()));
+        summary.put("Poussière de lore", new Change(user.getLoreDust(), state.getLoreDust().get()));
+        summary.put("Score", new Change(user.getScore(), state.getScore().get()));
+        summary.put("Cartes normales", new Change(oldInventory.getNormalCount(), newInventory.getNormalCount()));
+        summary.put("Cartes dorées", new Change(oldInventory.getGoldenCount(), newInventory.getGoldenCount()));
+        summary.put("Z Monnaie", new Change(user.getBalance(), state.getBalance().get()));
 
         return summary;
     }
