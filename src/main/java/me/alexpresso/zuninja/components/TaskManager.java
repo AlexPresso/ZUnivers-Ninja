@@ -39,8 +39,8 @@ public class TaskManager {
     public void updateLore() throws IOException, InterruptedException, NodeNotFoundException {
         logger.info("Updating lore...");
 
-        final var items = this.itemService.updateItems();
-        this.itemService.updateFusions(items);
+        //final var items = this.itemService.updateItems();
+        //this.itemService.updateFusions(items);
         this.eventService.updateEvents();
 
         logger.info("Done updating lore.");
