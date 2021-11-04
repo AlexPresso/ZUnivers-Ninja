@@ -1,5 +1,6 @@
 package me.alexpresso.zuninja.domain.nodes.event;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.datatype.jsr310.deser.LocalDateTimeDeserializer;
@@ -21,6 +22,8 @@ public class Event extends BaseGraphObject implements ActionElement {
     @JsonSerialize(using = LocalDateTimeSerializer.class)
     @JsonDeserialize(using = LocalDateTimeDeserializer.class)
     private LocalDateTime endDate;
+    @JsonProperty("isOneTime")
+    private boolean oneTime;
 
     public int getBalanceCost() {
         return balanceCost;
@@ -55,6 +58,15 @@ public class Event extends BaseGraphObject implements ActionElement {
 
     public Event setEndDate(LocalDateTime endDate) {
         this.endDate = endDate;
+        return this;
+    }
+
+    public boolean isOneTime() {
+        return this.oneTime;
+    }
+
+    public Event setOneTime(final boolean oneTime) {
+        this.oneTime = oneTime;
         return this;
     }
 
