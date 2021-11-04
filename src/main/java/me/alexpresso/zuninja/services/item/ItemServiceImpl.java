@@ -1,7 +1,7 @@
 package me.alexpresso.zuninja.services.item;
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import me.alexpresso.zuninja.classes.ItemDetail;
+import me.alexpresso.zuninja.classes.item.ItemDetail;
 import me.alexpresso.zuninja.domain.nodes.item.Fusion;
 import me.alexpresso.zuninja.domain.nodes.item.Item;
 import me.alexpresso.zuninja.domain.nodes.item.Pack;

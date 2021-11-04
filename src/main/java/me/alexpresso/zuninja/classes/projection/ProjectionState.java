@@ -20,12 +20,12 @@ public class ProjectionState {
     private final Set<Event> activeEvents;
 
 
-    public ProjectionState(final User user, final Set<Event> activeEvents, final int ascensionsCount) {
+    public ProjectionState(final User user, final Set<Event> activeEvents, final AtomicInteger ascensionsCount) {
         this.inventory = new InventoryProjection(user);
         this.loreDust = new AtomicInteger(user.getLoreDust());
         this.balance = new AtomicInteger(user.getBalance());
         this.score = new AtomicInteger(user.getScore());
-        this.ascensionsCount = new AtomicInteger(ascensionsCount);
+        this.ascensionsCount = ascensionsCount;
         this.normalFusions = new AtomicReference<>(null);
         this.goldenFusions = new AtomicReference<>(null);
         this.activeEvents = activeEvents;
