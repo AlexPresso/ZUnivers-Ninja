@@ -2,7 +2,7 @@ package me.alexpresso.zuninja.domain.nodes.item;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import me.alexpresso.zuninja.classes.RarityMetadata;
+import me.alexpresso.zuninja.classes.item.RarityMetadata;
 import me.alexpresso.zuninja.classes.projection.action.ActionElement;
 import me.alexpresso.zuninja.domain.base.BaseGraphObject;
 import me.alexpresso.zuninja.domain.relations.InputToFusion;
