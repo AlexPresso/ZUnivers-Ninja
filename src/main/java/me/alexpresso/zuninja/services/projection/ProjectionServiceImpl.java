@@ -18,11 +18,13 @@ import me.alexpresso.zuninja.repositories.FusionRepository;
 import me.alexpresso.zuninja.services.user.UserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
@@ -38,6 +40,9 @@ public class ProjectionServiceImpl implements ProjectionService {
 
     private final static int ASCENSION_COST = 20;
     private final static int PER_DAY_ASCENSIONS = 2;
+
+    @Value(value = "${goal:score}")
+    private String projectionGoal;
 
 
     public ProjectionServiceImpl(final FusionRepository fr, final UserService us, final EventRepository er, final MemoryCache mc) {
@@ -63,8 +68,6 @@ public class ProjectionServiceImpl implements ProjectionService {
         final var todayAscensions = (AtomicInteger) this.memoryCache.getOrDefault(CacheEntry.TODAY_ASCENSIONS, new AtomicInteger(0));
         final var state = new ProjectionState(user, activeEvents, todayAscensions);
 
-        this.projectRecycle(actions, state, false);
-        this.projectRecycle(actions, state, true);
         this.recursiveProjection(actions, state);
 
         this.memoryCache.put(CacheEntry.LAST_ADVICE_DATE, LocalDate.now())
@@ -80,6 +83,8 @@ public class ProjectionServiceImpl implements ProjectionService {
         this.projectUpgrades(actions, state);
         this.projectInvocation(actions, state);
         this.projectAscension(actions, state);
+        this.projectRecycle(actions, state, false);
+        this.projectRecycle(actions, state, true);
 
         if(actions.hasChanged())
             this.recursiveProjection(actions.newCycle(), state);
@@ -88,8 +93,9 @@ public class ProjectionServiceImpl implements ProjectionService {
     private void projectFusions(final ActionList actions, final ProjectionState state, final boolean golden) {
         final var projections = golden ? state.getGoldenFusions() : state.getNormalFusions();
         final var inventory = golden ? state.getInventory().getGoldenInventory() : state.getInventory().getNormalInventory();
-        final var comparator = Comparator.comparingDouble(FusionProjection::getDoability).reversed()
-            .thenComparing(f -> this.alreadyHasResult(inventory, f));
+        final var comparator = this.projectionGoal.equalsIgnoreCase("collection") ?
+            Comparator.comparingDouble(FusionProjection::getDoability).reversed() :
+            Comparator.comparingDouble(FusionProjection::getProfit).reversed();
 
         if(projections.get() == null) {
             final var p =  this.fusionRepository.findAll().stream()
@@ -98,23 +104,22 @@ public class ProjectionServiceImpl implements ProjectionService {
             projections.set(p);
         }
 
-        //Prioritize event fusions because it's the only period we can craft their missing inputs.
+        //Prioritize events fusions because it's the only period we can craft their missing inputs.
         if(!state.getActiveEvents().isEmpty()) {
-            final var event = state.getActiveEvents().iterator().next();
-
-            projections.get().stream()
-                .filter(p -> p.getFusion().getResult().getPack().getName().equalsIgnoreCase(event.getName()))
-                .sorted(comparator).forEach(p -> {
+            state.getActiveEvents().forEach(e -> projections.get().stream()
+                .filter(p -> p.getFusion().getResult().getPack().getName().equalsIgnoreCase(e.getName()) &&
+                    this.goalFilter(inventory, p)
+                ).sorted(comparator).forEach(p -> {
                     if(p.getDoability() >= 100)
                         this.solvedFusion(actions, p, state);
                     else
                         this.tryFillMissing(actions, p, state);
-                });
+                }));
         }
 
         //TODO: allow to redo fusion, only when inputs aren't used by other fusions OR other fusions result is already in inventory (recursive)
         projections.get().stream()
-            .filter(p -> !p.isSolved())
+            .filter(p -> this.goalFilter(inventory, p))
             .sorted(comparator).forEach(p -> {
                 if(p.getDoability() >= 100)
                     this.solvedFusion(actions, p, state);
@@ -122,13 +127,16 @@ public class ProjectionServiceImpl implements ProjectionService {
                     this.tryFillMissing(actions, p, state);
             });
     }
-    
-    private boolean alreadyHasResult(final Map<String, ItemProjection> inventory, final FusionProjection projection) {
-        if(inventory.containsKey(projection.getFusion().getResult().getId())) {
-            return inventory.get(projection.getFusion().getResult().getId()).getQuantity() > 0;
-        }
 
-        return false;
+
+    private boolean goalFilter(final Map<String, ItemProjection> inventory, final FusionProjection projection) {
+        final var iProj = Optional.ofNullable(inventory.getOrDefault(projection.getFusion().getResult().getId(), null));
+        final var hasItem = iProj.isPresent() && iProj.get().getQuantity() > 0;
+
+        if(this.projectionGoal.equalsIgnoreCase("collection"))
+            return !projection.isSolved() && !hasItem;
+
+        return true;
     }
 
     private void tryFillMissing(final ActionList actions, final FusionProjection projection, final ProjectionState state) {
@@ -211,13 +219,32 @@ public class ProjectionServiceImpl implements ProjectionService {
     }
 
     private void projectInvocation(final ActionList actions, final ProjectionState state) {
-        final var event = state.getActiveEvents().iterator().hasNext() ?
-            state.getActiveEvents().iterator().next() : null;
-        final int cost = event != null ? event.getBalanceCost() : 1000;
+        final var todayInvocations = (Set<String>) this.memoryCache.getOrDefault(CacheEntry.INVOCATIONS, new HashSet<String>());
+        final var hadCost = new AtomicBoolean(false);
 
-        if(state.getBalance().get() >= cost) {
-            actions.addElement(new Action(ActionType.INVOCATION, event));
-            state.getBalance().set(state.getBalance().get() - cost);
+        if(!state.getActiveEvents().isEmpty()) {
+            state.getActiveEvents().forEach(e -> {
+                if(e.isOneTime() && todayInvocations.contains(e.getIdentifier()))
+                    return;
+
+                if(state.getBalance().get() >= e.getBalanceCost()) {
+                    actions.addElement(new Action(ActionType.INVOCATION, e));
+                    state.getBalance().set(state.getBalance().get() - e.getBalanceCost());
+                }
+
+                todayInvocations.add(e.getIdentifier());
+                hadCost.set(e.getBalanceCost() > 0);
+            });
+
+            this.memoryCache.put(CacheEntry.INVOCATIONS, todayInvocations);
+
+            if(hadCost.get())
+                return;
+        }
+
+        if(state.getBalance().get() >= 1000) {
+            actions.addElement(new Action(ActionType.INVOCATION, null));
+            state.getBalance().set(state.getBalance().get() - 1000);
         }
     }
 

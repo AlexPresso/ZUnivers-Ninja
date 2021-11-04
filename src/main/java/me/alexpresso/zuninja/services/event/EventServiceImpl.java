@@ -53,6 +53,7 @@ public class EventServiceImpl implements EventService {
             .setName(e.getName())
             .setBeginDate(e.getBeginDate())
             .setEndDate(e.getEndDate())
+            .setOneTime(e.isOneTime())
         ));
 
         this.eventRepository.saveAll(dbEvents.values());
