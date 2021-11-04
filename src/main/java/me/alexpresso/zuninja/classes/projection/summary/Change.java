@@ -1,4 +1,4 @@
-package me.alexpresso.zuninja.classes;
+package me.alexpresso.zuninja.classes.projection.summary;
 
 public class Change {
     private final Object before;

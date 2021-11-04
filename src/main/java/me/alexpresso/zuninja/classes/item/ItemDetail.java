@@ -1,4 +1,4 @@
-package me.alexpresso.zuninja.classes;
+package me.alexpresso.zuninja.classes.item;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;

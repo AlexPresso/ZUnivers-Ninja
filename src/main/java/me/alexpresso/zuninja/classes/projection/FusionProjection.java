@@ -6,32 +6,22 @@ import me.alexpresso.zuninja.domain.nodes.item.Item;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class FusionProjection implements ActionElement {
     private final Fusion fusion;
     private final boolean golden;
     private final Map<String, ItemProjection> sharedInventory;
-    private int profit;
+    private final int profit;
     private boolean solved;
 
 
     public FusionProjection(final Fusion fusion, final boolean golden, final Map<String, ItemProjection> sharedInventory) {
         this.fusion = fusion;
-        this.profit = 0;
+        this.profit = golden ? this.fusion.getResult().getScoreGolden() : this.fusion.getResult().getScore();
         this.golden = golden;
         this.sharedInventory = sharedInventory;
         this.solved = false;
-
-        this.calculateProfit();
-    }
-
-
-    private void calculateProfit() {
-        final var inputsSum = this.fusion.getInputs().stream()
-            .map(i -> (this.golden ? i.getItem().getScoreGolden() : i.getItem().getScore()) * i.getQuantity())
-            .reduce(0, Integer::sum);
-
-        this.profit = inputsSum + this.fusion.getResult().getRarityMetadata().getBonus();
     }
 
 
@@ -70,18 +60,20 @@ public class FusionProjection implements ActionElement {
     }
 
     public double getDoability() {
-        var possessed = 0;
-        var total = 0;
+        var possessed = new AtomicInteger(0);
+        var total = new AtomicInteger(0);
 
-        for(var input : this.fusion.getInputs()) {
-            if(this.sharedInventory.containsKey(input.getItem().getId())) {
-                possessed += this.sharedInventory.get(input.getItem().getId()).getQuantity();
-            }
+        this.fusion.getInputs().stream()
+            .filter(i -> this.sharedInventory.containsKey(i.getItem().getId()))
+            .forEach(in -> {
+                total.getAndAdd(in.getQuantity());
+                possessed.getAndAdd(Math.min(this.sharedInventory.get(in.getItem().getId()).getQuantity(), in.getQuantity()));
+            });
 
-            total += input.getQuantity();
-        }
+        if(possessed.get() == 0 || total.get() == 0)
+            return 0D;
 
-        return (possessed * 100D) / total;
+        return (possessed.get() * 100D) / total.get();
     }
 
     public boolean isSolved() {

@@ -1,6 +1,6 @@
 package me.alexpresso.zuninja.services.projection;
 
-import me.alexpresso.zuninja.classes.Change;
+import me.alexpresso.zuninja.classes.projection.summary.Change;
 import me.alexpresso.zuninja.classes.cache.CacheEntry;
 import me.alexpresso.zuninja.classes.cache.MemoryCache;
 import me.alexpresso.zuninja.classes.projection.*;
@@ -58,9 +58,9 @@ public class ProjectionServiceImpl implements ProjectionService {
         final var lastAdvice = (LocalDate) this.memoryCache.getOrDefault(CacheEntry.LAST_ADVICE_DATE, LocalDate.now().minusDays(1));
 
         if(lastAdvice.isBefore(LocalDate.now()))
-            this.memoryCache.put(CacheEntry.TODAY_ASCENSIONS, 0);
+            this.memoryCache.put(CacheEntry.TODAY_ASCENSIONS, new AtomicInteger(0));
 
-        final var todayAscensions = (int) this.memoryCache.getOrDefault(CacheEntry.TODAY_ASCENSIONS, 0);
+        final var todayAscensions = (AtomicInteger) this.memoryCache.getOrDefault(CacheEntry.TODAY_ASCENSIONS, new AtomicInteger(0));
         final var state = new ProjectionState(user, activeEvents, todayAscensions);
 
         this.projectRecycle(actions, state, false);
@@ -88,6 +88,8 @@ public class ProjectionServiceImpl implements ProjectionService {
     private void projectFusions(final ActionList actions, final ProjectionState state, final boolean golden) {
         final var projections = golden ? state.getGoldenFusions() : state.getNormalFusions();
         final var inventory = golden ? state.getInventory().getGoldenInventory() : state.getInventory().getNormalInventory();
+        final var comparator = Comparator.comparingDouble(FusionProjection::getDoability).reversed()
+            .thenComparing(f -> this.alreadyHasResult(inventory, f));
 
         if(projections.get() == null) {
             final var p =  this.fusionRepository.findAll().stream()
@@ -96,21 +98,37 @@ public class ProjectionServiceImpl implements ProjectionService {
             projections.set(p);
         }
 
-        //if(event == en cours) {
-        //stream().filter(f -> pack == event.pack)
-        //}
+        //Prioritize event fusions because it's the only period we can craft their missing inputs.
+        if(!state.getActiveEvents().isEmpty()) {
+            final var event = state.getActiveEvents().iterator().next();
+
+            projections.get().stream()
+                .filter(p -> p.getFusion().getResult().getPack().getName().equalsIgnoreCase(event.getName()))
+                .sorted(comparator).forEach(p -> {
+                    if(p.getDoability() >= 100)
+                        this.solvedFusion(actions, p, state);
+                    else
+                        this.tryFillMissing(actions, p, state);
+                });
+        }
 
         //TODO: allow to redo fusion, only when inputs aren't used by other fusions OR other fusions result is already in inventory (recursive)
-        //TODO: Also prioritize fusions from events if there's one
         projections.get().stream()
-            .filter(p -> !p.isSolved() && !inventory.containsKey(p.getFusion().getResult().getId()))
-            .sorted(Comparator.comparingDouble(FusionProjection::getDoability).thenComparing(FusionProjection::getProfit).reversed())
-            .forEach(p -> {
+            .filter(p -> !p.isSolved())
+            .sorted(comparator).forEach(p -> {
                 if(p.getDoability() >= 100)
                     this.solvedFusion(actions, p, state);
                 else
                     this.tryFillMissing(actions, p, state);
             });
+    }
+    
+    private boolean alreadyHasResult(final Map<String, ItemProjection> inventory, final FusionProjection projection) {
+        if(inventory.containsKey(projection.getFusion().getResult().getId())) {
+            return inventory.get(projection.getFusion().getResult().getId()).getQuantity() > 0;
+        }
+
+        return false;
     }
 
     private void tryFillMissing(final ActionList actions, final FusionProjection projection, final ProjectionState state) {
@@ -212,19 +230,23 @@ public class ProjectionServiceImpl implements ProjectionService {
     }
 
     private void projectRecycle(final ActionList actions, final ProjectionState state, final boolean golden) {
-        //TODO: Recycle only items which are not input of fusion OR all fusion's results using this item are already in inventory
         final var toRecycle = new ActionElementList();
         final var inventory = golden ? state.getInventory().getGoldenInventory() :
             state.getInventory().getNormalInventory();
 
         inventory.values().stream()
-            .filter(iProj -> iProj.getItem().isRecyclable() && iProj.getQuantity() >= 3)
+            .filter(iProj -> iProj.getItem().isRecyclable() && iProj.getQuantity() > 1)
             .forEach(iProj -> {
-                final var count = iProj.getQuantity() - 2;
+                final var count = iProj.getItem().getInputOfFusions().isEmpty() ?
+                    iProj.getQuantity() - 1 :
+                    iProj.getQuantity() - 2;
                 final var recycleValue = golden ? iProj.getItem().getRarityMetadata().getGoldenRecycleValue() :
                     iProj.getItem().getRarityMetadata().getBaseRecycleValue();
 
-                this.consumeItem(state, iProj.getItem(), count, true);
+                if(count == 0)
+                    return;
+
+                this.consumeItem(state, iProj.getItem(), count, golden);
                 state.getLoreDust().getAndAdd(recycleValue);
                 toRecycle.add(new RecycleElement(iProj.getItem(), golden), count);
             });

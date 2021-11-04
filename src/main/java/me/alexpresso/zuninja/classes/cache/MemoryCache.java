@@ -1,14 +1,9 @@
 package me.alexpresso.zuninja.classes.cache;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.util.HashMap;
 import java.util.Map;
 
 public class MemoryCache {
-
-    private static final Logger logger = LoggerFactory.getLogger(MemoryCache.class);
 
     private final Map<CacheEntry, Object> cache;
 

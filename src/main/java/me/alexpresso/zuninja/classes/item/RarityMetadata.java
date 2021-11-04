@@ -1,15 +1,14 @@
-package me.alexpresso.zuninja.classes;
+package me.alexpresso.zuninja.classes.item;
 
 public enum RarityMetadata {
-    COMMON(1, 60, 20, 300, 100, 300),
-    UNCOMMON(7, 80, 20, 800, 200, 800),
-    RARE(19, 340, 100, 1600, 400, 1600),
-    ULTRA_RARE( 42, 1400, 400, 2800, 1400, 2800),
-    LEGENDARY( 42, 1400, 400, 2800, 1400, 2800),
-    STAR( 42, 1400, 400, 2800, 1400, 2800);
+    COMMON(60, 10, 300, 100, 300),
+    UNCOMMON(80, 20, 800, 200, 800),
+    RARE(340, 100, 1600, 400, 1600),
+    ULTRA_RARE(1400, 400, 2800, 1400, 2800),
+    LEGENDARY(1400, 400, 2800, 1400, 2800),
+    STAR(1400, 400, 2800, 1400, 2800);
 
 
-    private final int bonus;
     private final int baseCraftValue;
     private final int baseRecycleValue;
     private final int goldenCraftValue;
@@ -17,13 +16,11 @@ public enum RarityMetadata {
     private final int enchantValue;
 
 
-    RarityMetadata(final int bonus,
-                   final int baseCraftValue,
+    RarityMetadata(final int baseCraftValue,
                    final int baseRecycleValue,
                    final int goldenCraftValue,
                    final int goldenRecycleValue,
                    final int enchantValue) {
-        this.bonus = bonus;
         this.baseCraftValue = baseCraftValue;
         this.baseRecycleValue = baseRecycleValue;
         this.goldenCraftValue = goldenCraftValue;
@@ -50,10 +47,6 @@ public enum RarityMetadata {
 
     public int getGoldenRecycleValue() {
         return goldenRecycleValue;
-    }
-
-    public int getBonus() {
-        return this.bonus;
     }
 
     public int getEnchantValue() {

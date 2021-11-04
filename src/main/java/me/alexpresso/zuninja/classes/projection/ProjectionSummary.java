@@ -1,6 +1,6 @@
 package me.alexpresso.zuninja.classes.projection;
 
-import me.alexpresso.zuninja.classes.Change;
+import me.alexpresso.zuninja.classes.projection.summary.Change;
 import me.alexpresso.zuninja.classes.projection.action.ActionList;
 
 import java.util.HashMap;
