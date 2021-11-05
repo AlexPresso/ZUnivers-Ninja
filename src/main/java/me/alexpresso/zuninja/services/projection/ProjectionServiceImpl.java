@@ -274,7 +274,7 @@ public class ProjectionServiceImpl implements ProjectionService {
                     return;
 
                 this.consumeItem(state, iProj.getItem(), count, golden);
-                state.getLoreDust().getAndAdd(recycleValue);
+                state.getLoreDust().getAndAdd(recycleValue * count);
                 toRecycle.add(new RecycleElement(iProj.getItem(), golden), count);
             });
 
