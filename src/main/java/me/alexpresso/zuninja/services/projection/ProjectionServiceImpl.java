@@ -85,6 +85,7 @@ public class ProjectionServiceImpl implements ProjectionService {
         this.projectAscension(actions, state);
         this.projectRecycle(actions, state, false);
         this.projectRecycle(actions, state, true);
+        this.projectCraft(actions, state);
 
         if(actions.hasChanged())
             this.recursiveProjection(actions.newCycle(), state);
@@ -185,7 +186,10 @@ public class ProjectionServiceImpl implements ProjectionService {
                 toConsume.put(iProj, input.getQuantity());
             }
 
-            toConsume.forEach((i, q) -> this.consumeItem(state, i.getItem(), q, projection.isGolden()));
+            for(var e : toConsume.entrySet()) {
+                this.consumeItem(state, e.getKey().getItem(), e.getValue(), projection.isGolden());
+            }
+
             this.produceItem(state, projection.getFusion().getResult(), 1, projection.isGolden());
 
             state.getScore().getAndAdd(projection.getProfit());
@@ -207,14 +211,18 @@ public class ProjectionServiceImpl implements ProjectionService {
                 return;
 
             final var cost = itemProj.getItem().getRarityMetadata().getEnchantValue();
+            final var quantity = goldenInv.containsKey(id) ? goldenInv.get(id).getQuantity() : 0;
 
-            if(!goldenInv.containsKey(id) && itemProj.getQuantity() > 0 && state.getLoreDust().get() > cost) {
+            if(quantity > 0 || itemProj.getQuantity() < 2 || state.getLoreDust().get() < cost)
+                return;
+
+            try {
                 this.consumeItem(state, itemProj.getItem(), false);
                 this.produceItem(state, itemProj.getItem(), true);
 
                 actions.addElement(new Action(ActionType.ENCHANT, itemProj));
                 state.getLoreDust().set(state.getLoreDust().get() - cost);
-            }
+            } catch (Exception ignored) {}
         });
     }
 
@@ -256,42 +264,48 @@ public class ProjectionServiceImpl implements ProjectionService {
         }
     }
 
+    private void projectCraft(final ActionList actions, final ProjectionState state) {
+
+    }
+
     private void projectRecycle(final ActionList actions, final ProjectionState state, final boolean golden) {
         final var toRecycle = new ActionElementList();
         final var inventory = golden ? state.getInventory().getGoldenInventory() :
             state.getInventory().getNormalInventory();
 
-        inventory.values().stream()
-            .filter(iProj -> iProj.getItem().isRecyclable() && iProj.getQuantity() > 1)
-            .forEach(iProj -> {
-                final var count = iProj.getItem().getInputOfFusions().isEmpty() ?
-                    iProj.getQuantity() - 1 :
-                    iProj.getQuantity() - 2;
-                final var recycleValue = golden ? iProj.getItem().getRarityMetadata().getGoldenRecycleValue() :
-                    iProj.getItem().getRarityMetadata().getBaseRecycleValue();
+        for(final var iProj : inventory.values()) {
+            if(iProj.getItem().isRecyclable() && iProj.getQuantity() > 1) {
+                try {
+                    final var count = iProj.getItem().getInputOfFusions().isEmpty() ?
+                        iProj.getQuantity() - 1 :
+                        iProj.getQuantity() - 2;
+                    final var recycleValue = golden ? iProj.getItem().getRarityMetadata().getGoldenRecycleValue() :
+                        iProj.getItem().getRarityMetadata().getBaseRecycleValue();
 
-                if(count == 0)
-                    return;
+                    if(count <= 0)
+                        return;
 
-                this.consumeItem(state, iProj.getItem(), count, golden);
-                state.getLoreDust().getAndAdd(recycleValue * count);
-                toRecycle.add(new RecycleElement(iProj.getItem(), golden), count);
-            });
+                    this.consumeItem(state, iProj.getItem(), count, golden);
+                    state.getLoreDust().getAndAdd(recycleValue * count);
+                    toRecycle.add(new RecycleElement(iProj.getItem(), golden), count);
+                } catch (Exception ignored) {}
+            }
+        }
 
         if(!toRecycle.isEmpty())
             actions.addElement(new Action(ActionType.RECYCLE, toRecycle));
     }
 
 
-    private void consumeItem(final ProjectionState state, final Item item, final boolean golden) {
+    private void consumeItem(final ProjectionState state, final Item item, final boolean golden) throws ProjectionException {
         this.consumeItem(state, item, 1, golden);
     }
-    private void consumeItem(final ProjectionState state, final Item item, final int quantity, final boolean golden) {
+    private void consumeItem(final ProjectionState state, final Item item, final int quantity, final boolean golden) throws ProjectionException {
         final var inventory = golden ? state.getInventory().getGoldenInventory() :
             state.getInventory().getNormalInventory();
 
         if(!inventory.containsKey(item.getId()))
-            return;
+            throw new ProjectionException("Cannot consume non-existing item.");
 
         final var projection = inventory.get(item.getId());
         projection.consume(quantity);
