@@ -82,13 +82,13 @@ public class ProjectionServiceImpl implements ProjectionService {
 
 
     private void recursiveProjection(final ActionList actions, final ProjectionState state) {
+        this.projectRecycle(actions, state, false);
+        this.projectRecycle(actions, state, true);
         this.projectFusions(actions, state, false);
         this.projectFusions(actions, state, true);
         this.projectUpgrades(actions, state);
         this.projectInvocation(actions, state);
         this.projectAscension(actions, state);
-        this.projectRecycle(actions, state, false);
-        this.projectRecycle(actions, state, true);
         this.projectCraft(actions, state);
 
         if(actions.hasChanged())
@@ -295,26 +295,27 @@ public class ProjectionServiceImpl implements ProjectionService {
         final var inventory = golden ? state.getInventory().getGoldenInventory() :
             state.getInventory().getNormalInventory();
 
-        for(final var iProj : inventory.values()) {
-            if(iProj.getItem().isRecyclable() && iProj.getQuantity() > 1) {
-                try {
-                    final var count = iProj.getItem().getInputOfFusions().isEmpty() ?
-                        iProj.getQuantity() - 1 :
-                        iProj.getQuantity() - 2;
-                    final var recycleValue = golden ? iProj.getItem().getRarityMetadata().getGoldenRecycleValue() :
-                        iProj.getItem().getRarityMetadata().getBaseRecycleValue();
+        inventory.values().forEach(iProj -> {
+            if(!iProj.getItem().isRecyclable() || iProj.getQuantity() < 2)
+                return;
 
-                    if(count <= 0)
-                        return;
+            final var count = iProj.getItem().getInputOfFusions().isEmpty() ?
+                iProj.getQuantity() - 1 :
+                iProj.getQuantity() - 2;
+            final var recycleValue = golden ? iProj.getItem().getRarityMetadata().getGoldenRecycleValue() :
+                iProj.getItem().getRarityMetadata().getBaseRecycleValue();
 
-                    this.consumeItem(state, iProj.getItem(), count, golden);
-                    state.getLoreDust().getAndAdd(recycleValue * count);
-                    toRecycle.add(new RecycleElement(iProj.getItem(), golden), count);
-                } catch (ProjectionException e) {
-                    logger.error(e.getMessage());
-                }
+            if(count <= 0)
+                return;
+
+            try {
+                this.consumeItem(state, iProj.getItem(), count, golden);
+                state.getLoreDust().getAndAdd(recycleValue * count);
+                toRecycle.add(new RecycleElement(iProj.getItem(), golden), count);
+            } catch (ProjectionException e) {
+                logger.error(e.getMessage());
             }
-        }
+        });
 
         if(!toRecycle.isEmpty())
             actions.addElement(new Action(ActionType.RECYCLE, toRecycle));
