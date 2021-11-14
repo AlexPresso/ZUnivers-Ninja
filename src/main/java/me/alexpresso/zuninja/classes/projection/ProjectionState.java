@@ -1,10 +1,10 @@
 package me.alexpresso.zuninja.classes.projection;
 
 import me.alexpresso.zuninja.domain.nodes.event.Event;
+import me.alexpresso.zuninja.domain.nodes.item.Item;
 import me.alexpresso.zuninja.domain.nodes.user.User;
 
-import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -18,9 +18,10 @@ public class ProjectionState {
     private final AtomicReference<Set<FusionProjection>> normalFusions;
     private final AtomicReference<Set<FusionProjection>> goldenFusions;
     private final Set<Event> activeEvents;
+    private final List<Item> allItems;
 
 
-    public ProjectionState(final User user, final Set<Event> activeEvents, final AtomicInteger ascensionsCount) {
+    public ProjectionState(final User user, final Set<Event> activeEvents, final AtomicInteger ascensionsCount, final List<Item> allItems) {
         this.inventory = new InventoryProjection(user);
         this.loreDust = new AtomicInteger(user.getLoreDust());
         this.balance = new AtomicInteger(user.getBalance());
@@ -29,6 +30,7 @@ public class ProjectionState {
         this.normalFusions = new AtomicReference<>(null);
         this.goldenFusions = new AtomicReference<>(null);
         this.activeEvents = activeEvents;
+        this.allItems = allItems;
     }
 
 
@@ -62,5 +64,9 @@ public class ProjectionState {
 
     public Set<Event> getActiveEvents() {
         return this.activeEvents;
+    }
+
+    public List<Item> getAllItems() {
+        return this.allItems;
     }
 }

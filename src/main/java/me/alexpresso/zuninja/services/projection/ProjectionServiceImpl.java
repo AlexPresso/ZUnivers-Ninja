@@ -15,6 +15,7 @@ import me.alexpresso.zuninja.exceptions.NodeNotFoundException;
 import me.alexpresso.zuninja.exceptions.ProjectionException;
 import me.alexpresso.zuninja.repositories.EventRepository;
 import me.alexpresso.zuninja.repositories.FusionRepository;
+import me.alexpresso.zuninja.repositories.ItemRepository;
 import me.alexpresso.zuninja.services.user.UserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,6 +37,7 @@ public class ProjectionServiceImpl implements ProjectionService {
     private final FusionRepository fusionRepository;
     private final UserService userService;
     private final EventRepository eventRepository;
+    private final ItemRepository itemRepository;
     private final MemoryCache memoryCache;
 
     private final static int ASCENSION_COST = 20;
@@ -45,11 +47,12 @@ public class ProjectionServiceImpl implements ProjectionService {
     private String projectionGoal;
 
 
-    public ProjectionServiceImpl(final FusionRepository fr, final UserService us, final EventRepository er, final MemoryCache mc) {
+    public ProjectionServiceImpl(final FusionRepository fr, final UserService us, final EventRepository er, final MemoryCache mc, final ItemRepository ir) {
         this.fusionRepository = fr;
         this.userService = us;
         this.eventRepository = er;
         this.memoryCache = mc;
+        this.itemRepository = ir;
     }
 
 
@@ -60,13 +63,14 @@ public class ProjectionServiceImpl implements ProjectionService {
             .orElseThrow(() -> new NodeNotFoundException("This user doesn't exist."));
 
         final var activeEvents = this.eventRepository.findEventsAtDate(LocalDateTime.now());
+        final var allItems = this.itemRepository.findAll();
         final var lastAdvice = (LocalDate) this.memoryCache.getOrDefault(CacheEntry.LAST_ADVICE_DATE, LocalDate.now().minusDays(1));
 
         if(lastAdvice.isBefore(LocalDate.now()))
             this.memoryCache.put(CacheEntry.TODAY_ASCENSIONS, new AtomicInteger(0));
 
         final var todayAscensions = (AtomicInteger) this.memoryCache.getOrDefault(CacheEntry.TODAY_ASCENSIONS, new AtomicInteger(0));
-        final var state = new ProjectionState(user, activeEvents, todayAscensions);
+        final var state = new ProjectionState(user, activeEvents, todayAscensions, allItems);
 
         this.recursiveProjection(actions, state);
 
@@ -78,13 +82,13 @@ public class ProjectionServiceImpl implements ProjectionService {
 
 
     private void recursiveProjection(final ActionList actions, final ProjectionState state) {
+        this.projectRecycle(actions, state, false);
+        this.projectRecycle(actions, state, true);
         this.projectFusions(actions, state, false);
         this.projectFusions(actions, state, true);
         this.projectUpgrades(actions, state);
         this.projectInvocation(actions, state);
         this.projectAscension(actions, state);
-        this.projectRecycle(actions, state, false);
-        this.projectRecycle(actions, state, true);
         this.projectCraft(actions, state);
 
         if(actions.hasChanged())
@@ -139,6 +143,7 @@ public class ProjectionServiceImpl implements ProjectionService {
 
         return true;
     }
+
 
     private void tryFillMissing(final ActionList actions, final FusionProjection projection, final ProjectionState state) {
         final var cost = new AtomicInteger(0);
@@ -222,7 +227,9 @@ public class ProjectionServiceImpl implements ProjectionService {
 
                 actions.addElement(new Action(ActionType.ENCHANT, itemProj));
                 state.getLoreDust().set(state.getLoreDust().get() - cost);
-            } catch (Exception ignored) {}
+            } catch (ProjectionException e) {
+                logger.error(e.getMessage());
+            }
         });
     }
 
@@ -265,7 +272,22 @@ public class ProjectionServiceImpl implements ProjectionService {
     }
 
     private void projectCraft(final ActionList actions, final ProjectionState state) {
+        final var inventory = state.getInventory().getNormalInventory();
 
+        state.getAllItems().forEach(i -> {
+            if(!i.isCraftable())
+                return;
+
+            final var ownedQuantity = inventory.containsKey(i.getId()) ? inventory.get(i.getId()).getQuantity() : 0;
+            final var cost = i.getRarityMetadata().getBaseCraftValue();
+
+            if(ownedQuantity > 0 || state.getLoreDust().get() < cost)
+                return;
+
+            this.produceItem(state, i, false);
+            state.getLoreDust().set(state.getLoreDust().get() - cost);
+            actions.addElement(new Action(ActionType.CRAFT, i));
+        });
     }
 
     private void projectRecycle(final ActionList actions, final ProjectionState state, final boolean golden) {
@@ -273,24 +295,27 @@ public class ProjectionServiceImpl implements ProjectionService {
         final var inventory = golden ? state.getInventory().getGoldenInventory() :
             state.getInventory().getNormalInventory();
 
-        for(final var iProj : inventory.values()) {
-            if(iProj.getItem().isRecyclable() && iProj.getQuantity() > 1) {
-                try {
-                    final var count = iProj.getItem().getInputOfFusions().isEmpty() ?
-                        iProj.getQuantity() - 1 :
-                        iProj.getQuantity() - 2;
-                    final var recycleValue = golden ? iProj.getItem().getRarityMetadata().getGoldenRecycleValue() :
-                        iProj.getItem().getRarityMetadata().getBaseRecycleValue();
+        inventory.values().forEach(iProj -> {
+            if(!iProj.getItem().isRecyclable() || iProj.getQuantity() < 2)
+                return;
 
-                    if(count <= 0)
-                        return;
+            final var count = iProj.getItem().getInputOfFusions().isEmpty() ?
+                iProj.getQuantity() - 1 :
+                iProj.getQuantity() - 2;
+            final var recycleValue = golden ? iProj.getItem().getRarityMetadata().getGoldenRecycleValue() :
+                iProj.getItem().getRarityMetadata().getBaseRecycleValue();
 
-                    this.consumeItem(state, iProj.getItem(), count, golden);
-                    state.getLoreDust().getAndAdd(recycleValue * count);
-                    toRecycle.add(new RecycleElement(iProj.getItem(), golden), count);
-                } catch (Exception ignored) {}
+            if(count <= 0)
+                return;
+
+            try {
+                this.consumeItem(state, iProj.getItem(), count, golden);
+                state.getLoreDust().getAndAdd(recycleValue * count);
+                toRecycle.add(new RecycleElement(iProj.getItem(), golden), count);
+            } catch (ProjectionException e) {
+                logger.error(e.getMessage());
             }
-        }
+        });
 
         if(!toRecycle.isEmpty())
             actions.addElement(new Action(ActionType.RECYCLE, toRecycle));
