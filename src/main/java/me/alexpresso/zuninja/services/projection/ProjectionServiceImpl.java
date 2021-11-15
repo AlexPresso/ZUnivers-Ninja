@@ -333,6 +333,10 @@ public class ProjectionServiceImpl implements ProjectionService {
             throw new ProjectionException("Cannot consume non-existing item.");
 
         final var projection = inventory.get(item.getId());
+
+        if(projection.getQuantity() < quantity)
+            throw new ProjectionException("Not enough quantity to consume.");
+
         projection.consume(quantity);
 
         if (projection.getQuantity() == 0)
