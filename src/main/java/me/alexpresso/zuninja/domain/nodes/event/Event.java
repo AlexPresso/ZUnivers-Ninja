@@ -10,6 +10,7 @@ import me.alexpresso.zuninja.domain.base.BaseGraphObject;
 import org.springframework.data.neo4j.core.schema.Node;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 
 @Node
 public class Event extends BaseGraphObject implements ActionElement {
@@ -24,6 +25,7 @@ public class Event extends BaseGraphObject implements ActionElement {
     private LocalDateTime endDate;
     @JsonProperty("isOneTime")
     private boolean oneTime;
+    private String packId;
 
     public int getBalanceCost() {
         return balanceCost;
@@ -68,6 +70,20 @@ public class Event extends BaseGraphObject implements ActionElement {
     public Event setOneTime(final boolean oneTime) {
         this.oneTime = oneTime;
         return this;
+    }
+
+    public String getPackId() {
+        return this.packId;
+    }
+
+    public Event setPackId(final String packId) {
+        this.packId = packId;
+        return this;
+    }
+
+    @JsonProperty("pack")
+    public void unpackEvent(final Map<String, Object> pack) {
+        pack.computeIfPresent("id", (k, v) -> this.packId = v.toString());
     }
 
     @Override

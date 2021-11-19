@@ -5,6 +5,7 @@ import me.alexpresso.zuninja.domain.relations.InventoryItem;
 
 import java.util.Collection;
 import java.util.Map;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 public class InventoryProjection {
@@ -13,7 +14,7 @@ public class InventoryProjection {
 
     public InventoryProjection(final User user) {
         this.normalInventory = user.getInventory().stream()
-            .filter(i -> !i.isGolden())
+            .filter(Predicate.not(InventoryItem::isGolden))
             .collect(Collectors.toMap(iv -> iv.getItem().getId(), ItemProjection::new));
         this.goldenInventory = user.getInventory().stream()
             .filter(InventoryItem::isGolden)
