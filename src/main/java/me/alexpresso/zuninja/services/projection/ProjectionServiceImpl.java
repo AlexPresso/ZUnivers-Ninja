@@ -9,8 +9,10 @@ import me.alexpresso.zuninja.classes.projection.action.ActionElementList;
 import me.alexpresso.zuninja.classes.projection.action.ActionList;
 import me.alexpresso.zuninja.classes.projection.action.ActionType;
 import me.alexpresso.zuninja.classes.projection.recycle.RecycleElement;
+import me.alexpresso.zuninja.domain.nodes.event.Event;
 import me.alexpresso.zuninja.domain.nodes.item.Item;
 import me.alexpresso.zuninja.domain.nodes.user.User;
+import me.alexpresso.zuninja.domain.relations.InputToFusion;
 import me.alexpresso.zuninja.exceptions.NodeNotFoundException;
 import me.alexpresso.zuninja.exceptions.ProjectionException;
 import me.alexpresso.zuninja.repositories.EventRepository;
@@ -27,6 +29,7 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 @Service
@@ -112,7 +115,7 @@ public class ProjectionServiceImpl implements ProjectionService {
         //Prioritize events fusions because it's the only period we can craft their missing inputs.
         if(!state.getActiveEvents().isEmpty()) {
             state.getActiveEvents().forEach(e -> projections.get().stream()
-                .filter(p -> p.getFusion().getResult().getPack().getName().equalsIgnoreCase(e.getName()) &&
+                .filter(p -> p.getFusion().getResult().getPack().getId().equals(e.getPackId()) &&
                     this.goalFilter(inventory, p)
                 ).sorted(comparator).forEach(p -> {
                     if(p.getDoability() >= 100)
@@ -273,22 +276,36 @@ public class ProjectionServiceImpl implements ProjectionService {
 
     private void projectCraft(final ActionList actions, final ProjectionState state) {
         final var inventory = state.getInventory().getNormalInventory();
+        final var events = state.getActiveEvents().stream()
+            .map(Event::getPackId)
+            .collect(Collectors.toSet());
 
-        state.getAllItems().forEach(i -> {
-            if(!i.isCraftable())
-                return;
+        if(!events.isEmpty()) {
+            state.getAllItems().stream()
+                .filter(i -> events.contains(i.getPack().getId()))
+                .forEach(i -> this.tryCraft(actions, i, inventory, state));
+        }
 
-            final var ownedQuantity = inventory.containsKey(i.getId()) ? inventory.get(i.getId()).getQuantity() : 0;
-            final var cost = i.getRarityMetadata().getBaseCraftValue();
-
-            if(ownedQuantity > 0 || state.getLoreDust().get() < cost)
-                return;
-
-            this.produceItem(state, i, false);
-            state.getLoreDust().set(state.getLoreDust().get() - cost);
-            actions.addElement(new Action(ActionType.CRAFT, i));
-        });
+        state.getAllItems().stream()
+            .filter(Predicate.not(i -> events.contains(i.getPack().getId())))
+            .forEach(i -> this.tryCraft(actions, i, inventory, state));
     }
+
+    private void tryCraft(final ActionList actions, final Item i, final Map<String, ItemProjection> inventory, final ProjectionState state) {
+        if(!i.isCraftable())
+            return;
+
+        final var ownedQuantity = inventory.containsKey(i.getId()) ? inventory.get(i.getId()).getQuantity() : 0;
+        final var cost = i.getRarityMetadata().getBaseCraftValue();
+
+        if(ownedQuantity > 0 || state.getLoreDust().get() < cost)
+            return;
+
+        this.produceItem(state, i, false);
+        state.getLoreDust().set(state.getLoreDust().get() - cost);
+        actions.addElement(new Action(ActionType.CRAFT, i));
+    }
+
 
     private void projectRecycle(final ActionList actions, final ProjectionState state, final boolean golden) {
         final var toRecycle = new ActionElementList();
@@ -299,14 +316,17 @@ public class ProjectionServiceImpl implements ProjectionService {
             if(!iProj.getItem().isRecyclable() || iProj.getQuantity() < 2)
                 return;
 
-            final var count = iProj.getItem().getInputOfFusions().isEmpty() ?
-                iProj.getQuantity() - 1 :
-                iProj.getQuantity() - 2;
-            final var recycleValue = golden ? iProj.getItem().getRarityMetadata().getGoldenRecycleValue() :
-                iProj.getItem().getRarityMetadata().getBaseRecycleValue();
+            final int count = iProj.getItem().getInputOfFusions().stream()
+                .map(InputToFusion::getQuantity)
+                .reduce(Integer::sum)
+                .map(q -> iProj.getQuantity() - (q + 1))
+                .orElse(iProj.getQuantity() - 1);
 
             if(count <= 0)
                 return;
+
+            final var recycleValue = golden ? iProj.getItem().getRarityMetadata().getGoldenRecycleValue() :
+                iProj.getItem().getRarityMetadata().getBaseRecycleValue();
 
             try {
                 this.consumeItem(state, iProj.getItem(), count, golden);
