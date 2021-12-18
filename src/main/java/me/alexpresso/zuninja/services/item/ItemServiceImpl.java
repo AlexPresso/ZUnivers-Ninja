@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -68,27 +69,31 @@ public class ItemServiceImpl implements ItemService {
             .map(Item::getPack)
             .filter(StreamUtils.distinctByKey(Pack::getId))
             .collect(Collectors.toMap(Pack::getId, p -> dbPacks.getOrDefault(p.getId(), p).setName(p.getName()).setCraftable(p.getName().equalsIgnoreCase("vanilla"))));
+        final var count = new AtomicInteger(1);
 
-        for(var i = 0; i < items.size(); i++) {
-            final var item = items.get(i);
-            final var detail = this.fetchItemDetail(item);
+        items.parallelStream().forEach(item -> {
+            try {
+                final var detail = this.fetchItemDetail(item);
 
-            dbItems.put(item.getId(), dbItems.getOrDefault(item.getId(), item)
-                .setPack(packs.get(item.getPack().getId()))
-                .setGenre(item.getGenre())
-                .setName(item.getName())
-                .setRarity(item.getRarity())
-                .setSlug(item.getSlug())
-                .setCounting(detail.isCounting())
-                .setCraftable(detail.isCraftable())
-                .setInvocable(detail.isInvocable())
-                .setRecyclable(detail.isRecyclable())
-                .setTradable(detail.isTradable())
-                .setUpgradable(detail.isUpgradable())
-            );
+                dbItems.put(item.getId(), dbItems.getOrDefault(item.getId(), item)
+                    .setPack(packs.get(item.getPack().getId()))
+                    .setGenre(item.getGenre())
+                    .setName(item.getName())
+                    .setRarity(item.getRarity())
+                    .setSlug(item.getSlug())
+                    .setCounting(detail.isCounting())
+                    .setCraftable(detail.isCraftable())
+                    .setInvocable(detail.isInvocable())
+                    .setRecyclable(detail.isRecyclable())
+                    .setTradable(detail.isTradable())
+                    .setUpgradable(detail.isUpgradable())
+                );
 
-            logger.info("({}/{}) Updated {} ", i+1, items.size(), item.getName());
-        }
+                logger.info("({}/{}) Updated {} ", count.getAndIncrement(), items.size(), item.getName());
+            } catch (Exception e) {
+                logger.error("An error occurred while fetching {}: {}", item.getName(), e.getMessage());
+            }
+        });
 
         this.itemRepository.saveAll(dbItems.values());
         logger.debug("Updated items.");
