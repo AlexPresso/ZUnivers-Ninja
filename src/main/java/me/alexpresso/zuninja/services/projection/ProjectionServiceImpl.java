@@ -45,6 +45,7 @@ public class ProjectionServiceImpl implements ProjectionService {
 
     private final static int ASCENSION_COST = 20;
     private final static int PER_DAY_ASCENSIONS = 2;
+    private final static int UNICITY_BONUS = 6;
 
     @Value(value = "${goal:score}")
     private String projectionGoal;
@@ -91,8 +92,8 @@ public class ProjectionServiceImpl implements ProjectionService {
         this.projectFusions(actions, state, true);
         this.projectUpgrades(actions, state);
         this.projectInvocation(actions, state);
-        this.projectAscension(actions, state);
         this.projectCraft(actions, state);
+        this.projectAscension(actions, state);
 
         if(actions.hasChanged())
             this.recursiveProjection(actions.newCycle(), state);
@@ -358,9 +359,10 @@ public class ProjectionServiceImpl implements ProjectionService {
             throw new ProjectionException("Not enough quantity to consume.");
 
         projection.consume(quantity);
+        state.getScore().set(state.getScore().get() - ((golden ? item.getScoreGolden() : item.getScore()) * quantity));
 
         if (projection.getQuantity() == 0)
-            state.getScore().set(state.getScore().get() - (golden ? item.getScoreGolden() : item.getScore()));
+            state.getScore().set(state.getScore().get() - UNICITY_BONUS);
     }
 
     private void produceItem(final ProjectionState state, final Item item, final boolean golden) {
@@ -375,8 +377,10 @@ public class ProjectionServiceImpl implements ProjectionService {
         projection.produce(quantity);
         inventory.put(item.getId(), projection);
 
+        state.getScore().getAndAdd((golden ? item.getScoreGolden() : item.getScore()) * quantity);
+
         if(wasEmpty)
-            state.getScore().getAndAdd(golden ? item.getScoreGolden() : item.getScore());
+            state.getScore().getAndAdd(UNICITY_BONUS);
     }
 
 
