@@ -18,12 +18,14 @@ import me.alexpresso.zuninja.exceptions.ProjectionException;
 import me.alexpresso.zuninja.repositories.EventRepository;
 import me.alexpresso.zuninja.repositories.FusionRepository;
 import me.alexpresso.zuninja.repositories.ItemRepository;
+import me.alexpresso.zuninja.services.config.ConfigService;
 import me.alexpresso.zuninja.services.user.UserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -41,6 +43,7 @@ public class ProjectionServiceImpl implements ProjectionService {
     private final UserService userService;
     private final EventRepository eventRepository;
     private final ItemRepository itemRepository;
+    private final ConfigService configService;
     private final MemoryCache memoryCache;
 
     private final static int ASCENSION_COST = 20;
@@ -51,30 +54,37 @@ public class ProjectionServiceImpl implements ProjectionService {
     private String projectionGoal;
 
 
-    public ProjectionServiceImpl(final FusionRepository fr, final UserService us, final EventRepository er, final MemoryCache mc, final ItemRepository ir) {
+    public ProjectionServiceImpl(final FusionRepository fr,
+                                 final UserService us,
+                                 final EventRepository er,
+                                 final MemoryCache mc,
+                                 final ConfigService cs,
+                                 final ItemRepository ir) {
         this.fusionRepository = fr;
         this.userService = us;
         this.eventRepository = er;
         this.memoryCache = mc;
+        this.configService = cs;
         this.itemRepository = ir;
     }
 
 
     @Override
-    public ProjectionSummary makeProjectionsFor(final String discordTag) throws NodeNotFoundException {
+    public ProjectionSummary makeProjectionsFor(final String discordTag) throws NodeNotFoundException, IOException, InterruptedException {
         final var actions = new ActionList();
         final var user = this.userService.getUser(discordTag)
             .orElseThrow(() -> new NodeNotFoundException("This user doesn't exist."));
 
         final var activeEvents = this.eventRepository.findEventsAtDate(LocalDateTime.now());
         final var allItems = this.itemRepository.findAll();
+        final var config = this.configService.fetchConfiguration();
         final var lastAdvice = (LocalDate) this.memoryCache.getOrDefault(CacheEntry.LAST_ADVICE_DATE, LocalDate.now().minusDays(1));
 
         if(lastAdvice.isBefore(LocalDate.now()))
             this.memoryCache.put(CacheEntry.TODAY_ASCENSIONS, new AtomicInteger(0));
 
         final var todayAscensions = (AtomicInteger) this.memoryCache.getOrDefault(CacheEntry.TODAY_ASCENSIONS, new AtomicInteger(0));
-        final var state = new ProjectionState(user, activeEvents, todayAscensions, allItems);
+        final var state = new ProjectionState(user, activeEvents, todayAscensions, allItems, config);
 
         this.recursiveProjection(actions, state);
 
@@ -154,12 +164,10 @@ public class ProjectionServiceImpl implements ProjectionService {
         final var craftable = new AtomicInteger(0);
 
         projection.getMissingItems().forEach((i, q) -> {
-            if(projection.isGolden()) {
-                cost.getAndAdd(i.getRarityMetadata().getGoldenCraftValue() * q);
-                cost.getAndAdd(i.getRarityMetadata().getEnchantValue() * q);
-            } else {
-                cost.getAndAdd(i.getRarityMetadata().getBaseCraftValue() * q);
-            }
+            cost.getAndAdd(state.getConfigFor(i.getRarity(), false).getCraftValue() * q);
+
+            if(projection.isGolden())
+                cost.getAndAdd(state.getConfigFor(i.getRarity(), true).getCraftValue() * q);
 
             if(i.isCraftable())
                 craftable.incrementAndGet();
@@ -219,7 +227,7 @@ public class ProjectionServiceImpl implements ProjectionService {
             if(!itemProj.getItem().isUpgradable())
                 return;
 
-            final var cost = itemProj.getItem().getRarityMetadata().getEnchantValue();
+            final var cost = state.getConfigFor(itemProj.getItem().getRarity(), true).getCraftValue();
             final var quantity = goldenInv.containsKey(id) ? goldenInv.get(id).getQuantity() : 0;
 
             if(quantity > 0 || itemProj.getQuantity() < 2 || state.getLoreDust().get() < cost)
@@ -297,7 +305,7 @@ public class ProjectionServiceImpl implements ProjectionService {
             return;
 
         final var ownedQuantity = inventory.containsKey(i.getId()) ? inventory.get(i.getId()).getQuantity() : 0;
-        final var cost = i.getRarityMetadata().getBaseCraftValue();
+        final var cost = state.getConfigFor(i.getRarity(), false).getCraftValue();
 
         if(ownedQuantity > 0 || state.getLoreDust().get() < cost)
             return;
@@ -326,8 +334,7 @@ public class ProjectionServiceImpl implements ProjectionService {
             if(count <= 0)
                 return;
 
-            final var recycleValue = golden ? iProj.getItem().getRarityMetadata().getGoldenRecycleValue() :
-                iProj.getItem().getRarityMetadata().getBaseRecycleValue();
+            final var recycleValue = state.getConfigFor(iProj.getItem().getRarity(), golden).getRecycleValue();
 
             try {
                 this.consumeItem(state, iProj.getItem(), count, golden);
