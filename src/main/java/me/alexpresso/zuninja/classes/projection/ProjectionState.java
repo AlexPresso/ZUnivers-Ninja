@@ -1,11 +1,12 @@
 package me.alexpresso.zuninja.classes.projection;
 
+import me.alexpresso.zuninja.classes.config.Config;
+import me.alexpresso.zuninja.classes.config.ConfigPart;
 import me.alexpresso.zuninja.domain.nodes.event.Event;
 import me.alexpresso.zuninja.domain.nodes.item.Item;
 import me.alexpresso.zuninja.domain.nodes.user.User;
 
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -19,9 +20,14 @@ public class ProjectionState {
     private final AtomicReference<Set<FusionProjection>> goldenFusions;
     private final Set<Event> activeEvents;
     private final List<Item> allItems;
+    private final Config config;
 
 
-    public ProjectionState(final User user, final Set<Event> activeEvents, final AtomicInteger ascensionsCount, final List<Item> allItems) {
+    public ProjectionState(final User user,
+                           final Set<Event> activeEvents,
+                           final AtomicInteger ascensionsCount,
+                           final List<Item> allItems,
+                           final Config config) {
         this.inventory = new InventoryProjection(user);
         this.loreDust = new AtomicInteger(user.getLoreDust());
         this.balance = new AtomicInteger(user.getBalance());
@@ -31,6 +37,7 @@ public class ProjectionState {
         this.goldenFusions = new AtomicReference<>(null);
         this.activeEvents = activeEvents;
         this.allItems = allItems;
+        this.config = config;
     }
 
 
@@ -68,5 +75,10 @@ public class ProjectionState {
 
     public List<Item> getAllItems() {
         return this.allItems;
+    }
+
+    public ConfigPart getConfigFor(final int rarity, final boolean golden) {
+        return this.config.getConfigParts().get(rarity)
+            .get(golden);
     }
 }

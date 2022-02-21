@@ -16,6 +16,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
 import java.util.stream.Collectors;
 
 @Service
@@ -39,7 +40,7 @@ public class AdviceServiceImpl implements AdviceService {
 
 
     @Override
-    public void adviseUser(final String discordTag) throws NodeNotFoundException {
+    public void adviseUser(final String discordTag) throws NodeNotFoundException, IOException, InterruptedException {
         logger.info("Preparing to advise {}...", discordTag);
 
         final var summary = this.projectionService.makeProjectionsFor(discordTag);
