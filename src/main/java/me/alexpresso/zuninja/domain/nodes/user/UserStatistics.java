@@ -1,5 +1,6 @@
 package me.alexpresso.zuninja.domain.nodes.user;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import me.alexpresso.zuninja.domain.base.BaseGraphObject;
 import org.springframework.data.neo4j.core.schema.Node;
 import org.springframework.data.neo4j.core.schema.Relationship;
@@ -14,6 +15,8 @@ public class UserStatistics extends BaseGraphObject {
     private int itemCount;
     private int luckyCount;
     private int tradeCount;
+    @JsonProperty("isSubscribed")
+    private boolean subscribed;
     @Relationship(type = "USER_STATISTICS", direction = Relationship.Direction.INCOMING)
     private User user;
 
@@ -87,6 +90,14 @@ public class UserStatistics extends BaseGraphObject {
     }
     public UserStatistics setUser(final User user) {
         this.user = user;
+        return this;
+    }
+
+    public boolean isSubscribed() {
+        return this.subscribed;
+    }
+    public UserStatistics setSubscribed(final boolean subscribed) {
+        this.subscribed = subscribed;
         return this;
     }
 }

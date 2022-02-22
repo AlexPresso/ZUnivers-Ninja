@@ -8,7 +8,7 @@ public enum ChallengeType {
     FUSE(ActionType.FUSION),
     INVOKE(ActionType.INVOCATION),
     ASCEND(ActionType.ASCENSION),
-    TRADE(ActionType.TRADE),
+    TRADE,
     UPGRADE(ActionType.ENCHANT),
     CRAFT(ActionType.CRAFT),
     META_CHALLENGE,
@@ -17,7 +17,8 @@ public enum ChallengeType {
     INVOKE_ITEMS,
     TRADE_USERS,
     LUCKY(ActionType.LUCKY_RAYOU),
-    WEEKLY;
+    WEEKLY,
+    UNKNOWN;
 
 
     private final ActionType actionType;

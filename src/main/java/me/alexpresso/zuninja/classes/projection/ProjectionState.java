@@ -7,6 +7,7 @@ import me.alexpresso.zuninja.domain.nodes.item.Item;
 import me.alexpresso.zuninja.domain.nodes.user.User;
 
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -21,6 +22,7 @@ public class ProjectionState {
     private final Set<Event> activeEvents;
     private final List<Item> allItems;
     private final Config config;
+    private final AtomicBoolean subscribed;
 
 
     public ProjectionState(final User user,
@@ -38,6 +40,7 @@ public class ProjectionState {
         this.activeEvents = activeEvents;
         this.allItems = allItems;
         this.config = config;
+        this.subscribed = new AtomicBoolean(user.getStatistics().isSubscribed());
     }
 
 
@@ -80,5 +83,9 @@ public class ProjectionState {
     public ConfigPart getConfigFor(final int rarity, final boolean golden) {
         return this.config.getConfigParts().get(rarity)
             .get(golden);
+    }
+
+    public AtomicBoolean getSubscribed() {
+        return this.subscribed;
     }
 }

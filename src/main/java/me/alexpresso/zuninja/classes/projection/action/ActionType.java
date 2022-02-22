@@ -8,10 +8,13 @@ public enum ActionType {
     INVOCATION("im"),
     ASCENSION("as"),
     LUCKY_RAYOU("lr"),
-    TRADE("??");
+    AUTOMATED;
 
     private final String command;
 
+    ActionType() {
+        this(null);
+    }
     ActionType(final String command) {
         this.command = command;
     }

@@ -5,6 +5,7 @@ import club.minnced.discord.webhook.send.WebhookEmbedBuilder;
 import me.alexpresso.zuninja.classes.cache.CacheEntry;
 import me.alexpresso.zuninja.classes.cache.MemoryCache;
 import me.alexpresso.zuninja.classes.plugins.ZUNinjaPlugin;
+import me.alexpresso.zuninja.classes.projection.ProjectionSummary;
 import me.alexpresso.zuninja.classes.projection.action.ActionElement;
 import me.alexpresso.zuninja.exceptions.NodeNotFoundException;
 import me.alexpresso.zuninja.repositories.UserRepository;
@@ -17,6 +18,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 @Service
@@ -40,11 +42,12 @@ public class AdviceServiceImpl implements AdviceService {
 
 
     @Override
-    public void adviseUser(final String discordTag) throws NodeNotFoundException, IOException, InterruptedException {
+    public ProjectionSummary adviseUser(final String discordTag) throws NodeNotFoundException, IOException, InterruptedException {
         logger.info("Preparing to advise {}...", discordTag);
 
         final var summary = this.projectionService.makeProjectionsFor(discordTag);
         final var cmds = summary.getActions().stream()
+            .filter(a -> a.getRunnable().isEmpty())
             .map(a -> String.format("!%s %s", a.getType().getCommand(), a.getTarget().map(ActionElement::getIdentifier).orElse("")))
             .collect(Collectors.joining("\n"));
 
@@ -73,5 +76,7 @@ public class AdviceServiceImpl implements AdviceService {
             .forEach(p -> ((ZUNinjaPlugin) p).onAdvice(summary));
 
         logger.info("Done advising {}.", discordTag);
+
+        return summary;
     }
 }

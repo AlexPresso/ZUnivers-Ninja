@@ -7,16 +7,11 @@ import java.util.Map;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class Challenge {
-    private String id;
     private ChallengeType type;
     private int score;
     private int rewardLoreDust;
     private ChallengeProgress progress;
 
-
-    public String getId() {
-        return this.id;
-    }
 
     public int getScore() {
         return this.score;
@@ -39,6 +34,14 @@ public class Challenge {
     public void unpackChallenge(final Map<String, Object> challenge) {
         challenge.computeIfPresent("score", (k, v) -> this.score = Integer.parseInt(v.toString()));
         challenge.computeIfPresent("rewardLoreDust", (k, v) -> this.rewardLoreDust = Integer.parseInt(v.toString()));
-        challenge.computeIfPresent("type", (k, v) -> this.type = ChallengeType.valueOf(v.toString()));
+        challenge.computeIfPresent("type", (k, v) -> {
+            try {
+                this.type = ChallengeType.valueOf(v.toString());
+            } catch (IllegalArgumentException ignored) {
+                this.type = ChallengeType.UNKNOWN;
+            }
+
+            return this.type;
+        });
     }
 }

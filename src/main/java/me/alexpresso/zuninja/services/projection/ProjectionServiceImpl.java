@@ -1,6 +1,5 @@
 package me.alexpresso.zuninja.services.projection;
 
-import me.alexpresso.zuninja.classes.projection.summary.Change;
 import me.alexpresso.zuninja.classes.cache.CacheEntry;
 import me.alexpresso.zuninja.classes.cache.MemoryCache;
 import me.alexpresso.zuninja.classes.projection.*;
@@ -9,7 +8,7 @@ import me.alexpresso.zuninja.classes.projection.action.ActionElementList;
 import me.alexpresso.zuninja.classes.projection.action.ActionList;
 import me.alexpresso.zuninja.classes.projection.action.ActionType;
 import me.alexpresso.zuninja.classes.projection.recycle.RecycleElement;
-import me.alexpresso.zuninja.domain.nodes.event.Event;
+import me.alexpresso.zuninja.classes.projection.summary.Change;
 import me.alexpresso.zuninja.domain.nodes.item.Item;
 import me.alexpresso.zuninja.domain.nodes.user.User;
 import me.alexpresso.zuninja.domain.relations.InputToFusion;
@@ -19,6 +18,7 @@ import me.alexpresso.zuninja.repositories.EventRepository;
 import me.alexpresso.zuninja.repositories.FusionRepository;
 import me.alexpresso.zuninja.repositories.ItemRepository;
 import me.alexpresso.zuninja.services.config.ConfigService;
+import me.alexpresso.zuninja.services.subscription.SubscriptionService;
 import me.alexpresso.zuninja.services.user.UserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,7 +31,6 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 @Service
@@ -45,11 +44,13 @@ public class ProjectionServiceImpl implements ProjectionService {
     private final ItemRepository itemRepository;
     private final ConfigService configService;
     private final MemoryCache memoryCache;
+    private final SubscriptionService subscriptionService;
 
     private final static int ASCENSION_COST = 20;
     private final static int INVOCATION_COST = 1000;
     private final static int PER_DAY_ASCENSIONS = 2;
     private final static int UNICITY_BONUS = 6;
+    private final static int SUBSCRIPTION_COST = 4000;
 
     @Value(value = "${goal:score}")
     private String projectionGoal;
@@ -60,13 +61,15 @@ public class ProjectionServiceImpl implements ProjectionService {
                                  final EventRepository er,
                                  final MemoryCache mc,
                                  final ConfigService cs,
-                                 final ItemRepository ir) {
+                                 final ItemRepository ir,
+                                 final SubscriptionService ss) {
         this.fusionRepository = fr;
         this.userService = us;
         this.eventRepository = er;
         this.memoryCache = mc;
         this.configService = cs;
         this.itemRepository = ir;
+        this.subscriptionService = ss;
     }
 
 
@@ -101,6 +104,7 @@ public class ProjectionServiceImpl implements ProjectionService {
         this.projectRecycle(actions, state, true);
         this.projectFusions(actions, state, false);
         this.projectFusions(actions, state, true);
+        this.projectSubscription(actions, state);
         this.projectUpgrades(actions, state);
         this.projectInvocation(actions, state);
         this.projectCraft(actions, state);
@@ -109,6 +113,17 @@ public class ProjectionServiceImpl implements ProjectionService {
         if(actions.hasChanged())
             this.recursiveProjection(actions.newCycle(), state);
     }
+
+    private boolean goalFilter(final Map<String, ItemProjection> inventory, final FusionProjection projection) {
+        final var iProj = Optional.ofNullable(inventory.getOrDefault(projection.getFusion().getResult().getId(), null));
+        final var hasItem = iProj.isPresent() && iProj.get().getQuantity() > 0;
+
+        if(this.projectionGoal.equalsIgnoreCase("collection"))
+            return !projection.isSolved() && !hasItem;
+
+        return true;
+    }
+
 
     private void projectFusions(final ActionList actions, final ProjectionState state, final boolean golden) {
         final var projections = golden ? state.getGoldenFusions() : state.getNormalFusions();
@@ -147,18 +162,6 @@ public class ProjectionServiceImpl implements ProjectionService {
                     this.tryFillMissing(actions, p, state);
             });
     }
-
-
-    private boolean goalFilter(final Map<String, ItemProjection> inventory, final FusionProjection projection) {
-        final var iProj = Optional.ofNullable(inventory.getOrDefault(projection.getFusion().getResult().getId(), null));
-        final var hasItem = iProj.isPresent() && iProj.get().getQuantity() > 0;
-
-        if(this.projectionGoal.equalsIgnoreCase("collection"))
-            return !projection.isSolved() && !hasItem;
-
-        return true;
-    }
-
 
     private void tryFillMissing(final ActionList actions, final FusionProjection projection, final ProjectionState state) {
         final var cost = new AtomicInteger(0);
@@ -220,6 +223,19 @@ public class ProjectionServiceImpl implements ProjectionService {
         }
     }
 
+
+    private void projectSubscription(final ActionList actions, final ProjectionState state) {
+        if(state.getSubscribed().get() || state.getLoreDust().get() < SUBSCRIPTION_COST)
+            return;
+
+        //TODO: rentability check on 2000
+
+        state.getLoreDust().getAndAdd(-SUBSCRIPTION_COST);
+        actions.addElement(new Action(ActionType.AUTOMATED, null, this.subscriptionService::subscribe));
+        state.getSubscribed().set(true);
+    }
+
+
     private void projectUpgrades(final ActionList actions, final ProjectionState state) {
         final var normalInv = state.getInventory().getNormalInventory();
         final var goldenInv = state.getInventory().getGoldenInventory();
@@ -245,6 +261,7 @@ public class ProjectionServiceImpl implements ProjectionService {
             }
         });
     }
+
 
     private void projectInvocation(final ActionList actions, final ProjectionState state) {
         final var todayInvocations = (Set<String>) this.memoryCache.getOrDefault(CacheEntry.INVOCATIONS, new HashSet<String>());
@@ -276,6 +293,7 @@ public class ProjectionServiceImpl implements ProjectionService {
         }
     }
 
+
     private void projectAscension(final ActionList actions, final ProjectionState state) {
         if(state.getLoreDust().get() >= ASCENSION_COST && state.getAscensionsCount().get() < PER_DAY_ASCENSIONS) {
             actions.addElement(new Action(ActionType.ASCENSION, null));
@@ -284,21 +302,10 @@ public class ProjectionServiceImpl implements ProjectionService {
         }
     }
 
+
     private void projectCraft(final ActionList actions, final ProjectionState state) {
         final var inventory = state.getInventory().getNormalInventory();
-        final var events = state.getActiveEvents().stream()
-            .map(Event::getPackId)
-            .collect(Collectors.toSet());
-
-        if(!events.isEmpty()) {
-            state.getAllItems().stream()
-                .filter(i -> events.contains(i.getPack().getId()))
-                .forEach(i -> this.tryCraft(actions, i, inventory, state));
-        }
-
-        state.getAllItems().stream()
-            .filter(Predicate.not(i -> events.contains(i.getPack().getId())))
-            .forEach(i -> this.tryCraft(actions, i, inventory, state));
+        state.getAllItems().forEach(i -> this.tryCraft(actions, i, inventory, state));
     }
 
     private void tryCraft(final ActionList actions, final Item i, final Map<String, ItemProjection> inventory, final ProjectionState state) {

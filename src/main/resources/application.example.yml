@@ -6,6 +6,7 @@ spring.neo4j:
 
 toolkit:
   discordTag: Alex'Presso#5480
+  runAutomatedTasks: true
 
 zunivers:
   apiBaseUrl: zunivers-api.zerator.com
