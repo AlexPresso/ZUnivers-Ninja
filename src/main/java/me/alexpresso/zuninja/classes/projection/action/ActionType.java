@@ -6,7 +6,9 @@ public enum ActionType {
     ENCHANT("enchantement"),
     FUSION("fusion"),
     INVOCATION("im"),
-    ASCENSION("as");
+    ASCENSION("as"),
+    LUCKY_RAYOU("lr"),
+    TRADE("??");
 
     private final String command;
 

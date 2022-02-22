@@ -47,6 +47,7 @@ public class ProjectionServiceImpl implements ProjectionService {
     private final MemoryCache memoryCache;
 
     private final static int ASCENSION_COST = 20;
+    private final static int INVOCATION_COST = 1000;
     private final static int PER_DAY_ASCENSIONS = 2;
     private final static int UNICITY_BONUS = 6;
 
@@ -269,9 +270,9 @@ public class ProjectionServiceImpl implements ProjectionService {
                 return;
         }
 
-        if(state.getBalance().get() >= 1000) {
+        if(state.getBalance().get() >= INVOCATION_COST) {
             actions.addElement(new Action(ActionType.INVOCATION, null));
-            state.getBalance().set(state.getBalance().get() - 1000);
+            state.getBalance().set(state.getBalance().get() - INVOCATION_COST);
         }
     }
 

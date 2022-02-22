@@ -1,6 +1,8 @@
 package me.alexpresso.zuninja.services.user;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import me.alexpresso.zuninja.classes.challenge.Challenge;
+import me.alexpresso.zuninja.classes.challenge.ChallengeType;
 import me.alexpresso.zuninja.domain.nodes.item.Item;
 import me.alexpresso.zuninja.domain.nodes.user.User;
 import me.alexpresso.zuninja.domain.nodes.user.UserStatistics;
@@ -18,6 +20,7 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -92,5 +95,14 @@ public class UserServiceImpl implements UserService {
         this.userRepository.save(user);
 
         logger.debug("Updated {}'s inventory.", discordTag);
+    }
+
+    @Override
+    public Set<Challenge> fetchUserChallenges(final String discordTag) throws IOException, InterruptedException {
+        return (Set<Challenge>) this.requestService.request(
+            String.format("/public/challenge/%s", URLEncoder.encode(discordTag, StandardCharsets.UTF_8)),
+            "GET",
+            new TypeReference<Set<Challenge>>() {}
+        );
     }
 }
