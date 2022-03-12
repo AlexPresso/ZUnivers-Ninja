@@ -14,6 +14,7 @@ import java.util.concurrent.atomic.AtomicReference;
 public class ProjectionState {
     private final InventoryProjection inventory;
     private final AtomicInteger loreDust;
+    private final AtomicInteger loreFragment;
     private final AtomicInteger balance;
     private final AtomicInteger score;
     private final AtomicInteger ascensionsCount;
@@ -32,6 +33,7 @@ public class ProjectionState {
                            final Config config) {
         this.inventory = new InventoryProjection(user);
         this.loreDust = new AtomicInteger(user.getLoreDust());
+        this.loreFragment = new AtomicInteger(user.getLoreFragment());
         this.balance = new AtomicInteger(user.getBalance());
         this.score = new AtomicInteger(user.getScore());
         this.ascensionsCount = ascensionsCount;
@@ -50,6 +52,10 @@ public class ProjectionState {
 
     public AtomicInteger getLoreDust() {
         return this.loreDust;
+    }
+
+    public AtomicInteger getLoreFragment() {
+        return this.loreFragment;
     }
 
     public AtomicInteger getBalance() {
@@ -87,5 +93,11 @@ public class ProjectionState {
 
     public AtomicBoolean getSubscribed() {
         return this.subscribed;
+    }
+
+    public AtomicInteger getMoneyFor(final Item item) {
+        return item.getPack().getName().equalsIgnoreCase("classique") ?
+            this.loreDust :
+            this.loreFragment;
     }
 }

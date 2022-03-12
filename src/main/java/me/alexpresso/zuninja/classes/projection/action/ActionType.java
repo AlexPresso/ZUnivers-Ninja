@@ -8,7 +8,7 @@ public enum ActionType {
     INVOCATION("im"),
     ASCENSION("as"),
     LUCKY_RAYOU("lr"),
-    AUTOMATED;
+    SUBSCRIBE;
 
     private final String command;
 

@@ -166,6 +166,7 @@ public class ProjectionServiceImpl implements ProjectionService {
     private void tryFillMissing(final ActionList actions, final FusionProjection projection, final ProjectionState state) {
         final var cost = new AtomicInteger(0);
         final var craftable = new AtomicInteger(0);
+        final var money = state.getMoneyFor(projection.getFusion().getResult());
 
         projection.getMissingItems().forEach((i, q) -> {
             cost.getAndAdd(state.getConfigFor(i.getRarity(), false).getCraftValue() * q);
@@ -179,7 +180,7 @@ public class ProjectionServiceImpl implements ProjectionService {
             //TODO: can input be made by another cheaper fusion ?
         });
 
-        if(state.getLoreDust().get() > cost.get() && craftable.get() == projection.getMissingItems().size()) {
+        if(money.get() > cost.get() && craftable.get() == projection.getMissingItems().size()) {
             projection.getMissingItems().forEach((i, q) -> {
                 this.produceItem(state, i, q, projection.isGolden());
 
@@ -189,7 +190,7 @@ public class ProjectionServiceImpl implements ProjectionService {
                 }
             });
 
-            state.getLoreDust().set(state.getLoreDust().get() - cost.get());
+            money.getAndAdd(-cost.get());
         }
     }
 
@@ -231,7 +232,7 @@ public class ProjectionServiceImpl implements ProjectionService {
         //TODO: rentability check on 2000
 
         state.getLoreDust().getAndAdd(-SUBSCRIPTION_COST);
-        actions.addElement(new Action(ActionType.AUTOMATED, null, this.subscriptionService::subscribe));
+        actions.addElement(new Action(ActionType.SUBSCRIBE, null, this.subscriptionService::subscribe));
         state.getSubscribed().set(true);
     }
 
@@ -246,8 +247,9 @@ public class ProjectionServiceImpl implements ProjectionService {
 
             final var cost = state.getConfigFor(itemProj.getItem().getRarity(), true).getCraftValue();
             final var quantity = goldenInv.containsKey(id) ? goldenInv.get(id).getQuantity() : 0;
+            final var money = state.getMoneyFor(itemProj.getItem());
 
-            if(quantity > 0 || itemProj.getQuantity() < 2 || state.getLoreDust().get() < cost)
+            if(quantity > 0 || itemProj.getQuantity() < 2 || money.get() < cost)
                 return;
 
             try {
@@ -255,7 +257,7 @@ public class ProjectionServiceImpl implements ProjectionService {
                 this.produceItem(state, itemProj.getItem(), true);
 
                 actions.addElement(new Action(ActionType.ENCHANT, itemProj));
-                state.getLoreDust().set(state.getLoreDust().get() - cost);
+                money.getAndAdd(-cost);
             } catch (ProjectionException e) {
                 logger.error(e.getMessage());
             }
@@ -274,7 +276,7 @@ public class ProjectionServiceImpl implements ProjectionService {
 
                 if(state.getBalance().get() >= e.getBalanceCost()) {
                     actions.addElement(new Action(ActionType.INVOCATION, e));
-                    state.getBalance().set(state.getBalance().get() - e.getBalanceCost());
+                    state.getBalance().getAndAdd(-e.getBalanceCost());
                 }
 
                 todayInvocations.add(e.getIdentifier());
@@ -289,7 +291,7 @@ public class ProjectionServiceImpl implements ProjectionService {
 
         if(state.getBalance().get() >= INVOCATION_COST) {
             actions.addElement(new Action(ActionType.INVOCATION, null));
-            state.getBalance().set(state.getBalance().get() - INVOCATION_COST);
+            state.getBalance().getAndAdd(-INVOCATION_COST);
         }
     }
 
@@ -297,7 +299,7 @@ public class ProjectionServiceImpl implements ProjectionService {
     private void projectAscension(final ActionList actions, final ProjectionState state) {
         if(state.getLoreDust().get() >= ASCENSION_COST && state.getAscensionsCount().get() < PER_DAY_ASCENSIONS) {
             actions.addElement(new Action(ActionType.ASCENSION, null));
-            state.getLoreDust().set(state.getLoreDust().get() - ASCENSION_COST);
+            state.getLoreDust().getAndAdd(-ASCENSION_COST);
             state.getAscensionsCount().getAndIncrement();
         }
     }
@@ -314,12 +316,13 @@ public class ProjectionServiceImpl implements ProjectionService {
 
         final var ownedQuantity = inventory.containsKey(i.getId()) ? inventory.get(i.getId()).getQuantity() : 0;
         final var cost = state.getConfigFor(i.getRarity(), false).getCraftValue();
+        final var money = state.getMoneyFor(i);
 
-        if(ownedQuantity > 0 || state.getLoreDust().get() < cost)
+        if(ownedQuantity > 0 || money.get() < cost)
             return;
 
         this.produceItem(state, i, false);
-        state.getLoreDust().set(state.getLoreDust().get() - cost);
+        money.getAndAdd(-cost);
         actions.addElement(new Action(ActionType.CRAFT, i));
     }
 
@@ -342,11 +345,12 @@ public class ProjectionServiceImpl implements ProjectionService {
             if(count <= 0)
                 return;
 
+            final var money = state.getMoneyFor(iProj.getItem());
             final var recycleValue = state.getConfigFor(iProj.getItem().getRarity(), golden).getRecycleValue();
 
             try {
                 this.consumeItem(state, iProj.getItem(), count, golden);
-                state.getLoreDust().getAndAdd(recycleValue * count);
+                money.getAndAdd(recycleValue * count);
                 toRecycle.add(new RecycleElement(iProj.getItem(), golden), count);
             } catch (ProjectionException e) {
                 logger.error(e.getMessage());
@@ -374,17 +378,18 @@ public class ProjectionServiceImpl implements ProjectionService {
             throw new ProjectionException("Not enough quantity to consume.");
 
         projection.consume(quantity);
-        state.getScore().set(state.getScore().get() - ((golden ? item.getScoreGolden() : item.getScore()) * quantity));
+        state.getScore().getAndAdd(-((golden ? item.getScoreGolden() : item.getScore()) * quantity));
 
         if (projection.getQuantity() == 0)
-            state.getScore().set(state.getScore().get() - UNICITY_BONUS);
+            state.getScore().getAndAdd(-UNICITY_BONUS);
     }
 
     private void produceItem(final ProjectionState state, final Item item, final boolean golden) {
         this.produceItem(state, item, 1, golden);
     }
     private void produceItem(final ProjectionState state, final Item item, final int quantity, final boolean golden) {
-        final var inventory = golden ? state.getInventory().getGoldenInventory() :
+        final var inventory = golden ?
+            state.getInventory().getGoldenInventory() :
             state.getInventory().getNormalInventory();
         final var projection = inventory.getOrDefault(item.getId(), new ItemProjection(item, 0));
         final var wasEmpty = projection.getQuantity() == 0;
@@ -404,7 +409,8 @@ public class ProjectionServiceImpl implements ProjectionService {
         final var oldInventory = new InventoryProjection(user);
         final var newInventory = state.getInventory();
 
-        summary.put("Poussière de lore", new Change(user.getLoreDust(), state.getLoreDust().get()));
+        summary.put("Poudre créatrice", new Change(user.getLoreDust(), state.getLoreDust().get()));
+        summary.put("Cristaux d'histoire", new Change(user.getLoreFragment(), state.getLoreFragment().get()));
         summary.put("Score", new Change(user.getScore(), state.getScore().get()));
         summary.put("Cartes normales", new Change(oldInventory.getNormalCount(), newInventory.getNormalCount()));
         summary.put("Cartes dorées", new Change(oldInventory.getGoldenCount(), newInventory.getGoldenCount()));

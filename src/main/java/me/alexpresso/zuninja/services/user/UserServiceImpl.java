@@ -81,6 +81,7 @@ public class UserServiceImpl implements UserService {
 
         user.setStatistics(user.getStatistics() == null ? statistics : user.getStatistics())
             .setLoreDust(statistics.getUser().getLoreDust())
+            .setLoreFragment(statistics.getUser().getLoreFragment())
             .setBalance(statistics.getUser().getBalance())
             .setScore(statistics.getUser().getScore())
             .setPosition(statistics.getUser().getPosition())
