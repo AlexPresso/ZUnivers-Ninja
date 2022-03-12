@@ -7,13 +7,10 @@ spring.neo4j:
 toolkit:
   discordTag: Alex'Presso#5480
   runAutomatedTasks: true
-  refreshToken:
 
 zunivers:
   apiBaseUrl: zunivers-api.zerator.com
   frontBaseUrl: zunivers.zerator.com
-  keycloakBaseUrl: keycloak-zunivers-prod.prod.poneyy.fr
-  keycloakClientId: zunivers
 
 webhookUrl: #insert your own (facultative)
 

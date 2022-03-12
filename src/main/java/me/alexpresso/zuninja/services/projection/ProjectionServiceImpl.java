@@ -18,7 +18,6 @@ import me.alexpresso.zuninja.repositories.EventRepository;
 import me.alexpresso.zuninja.repositories.FusionRepository;
 import me.alexpresso.zuninja.repositories.ItemRepository;
 import me.alexpresso.zuninja.services.config.ConfigService;
-import me.alexpresso.zuninja.services.subscription.SubscriptionService;
 import me.alexpresso.zuninja.services.user.UserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,7 +43,6 @@ public class ProjectionServiceImpl implements ProjectionService {
     private final ItemRepository itemRepository;
     private final ConfigService configService;
     private final MemoryCache memoryCache;
-    private final SubscriptionService subscriptionService;
 
     private final static int ASCENSION_COST = 20;
     private final static int INVOCATION_COST = 1000;
@@ -61,15 +59,13 @@ public class ProjectionServiceImpl implements ProjectionService {
                                  final EventRepository er,
                                  final MemoryCache mc,
                                  final ConfigService cs,
-                                 final ItemRepository ir,
-                                 final SubscriptionService ss) {
+                                 final ItemRepository ir) {
         this.fusionRepository = fr;
         this.userService = us;
         this.eventRepository = er;
         this.memoryCache = mc;
         this.configService = cs;
         this.itemRepository = ir;
-        this.subscriptionService = ss;
     }
 
 
@@ -230,9 +226,10 @@ public class ProjectionServiceImpl implements ProjectionService {
             return;
 
         //TODO: rentability check on 2000
+        //TODO: Auto subscription + Keycloak auth negociation
 
         state.getLoreDust().getAndAdd(-SUBSCRIPTION_COST);
-        actions.addElement(new Action(ActionType.SUBSCRIBE, null, this.subscriptionService::subscribe));
+        actions.addElement(new Action(ActionType.SUBSCRIBE, null, null));
         state.getSubscribed().set(true);
     }
 
