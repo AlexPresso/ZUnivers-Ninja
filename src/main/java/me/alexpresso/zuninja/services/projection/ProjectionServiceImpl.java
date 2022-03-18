@@ -27,6 +27,7 @@ import org.springframework.stereotype.Service;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -49,6 +50,7 @@ public class ProjectionServiceImpl implements ProjectionService {
     private final static int PER_DAY_ASCENSIONS = 2;
     private final static int UNICITY_BONUS = 6;
     private final static int SUBSCRIPTION_COST = 4000;
+    private final static int DAILY_REWARD = 1200;
 
     @Value(value = "${goal:score}")
     private String projectionGoal;
@@ -75,16 +77,26 @@ public class ProjectionServiceImpl implements ProjectionService {
         final var user = this.userService.getUser(discordTag)
             .orElseThrow(() -> new NodeNotFoundException("This user doesn't exist."));
 
+        final var challenges = this.userService.fetchUserChallenges(discordTag);
         final var activeEvents = this.eventRepository.findEventsAtDate(LocalDateTime.now());
         final var allItems = this.itemRepository.findAll();
         final var config = this.configService.fetchConfiguration();
+        final var dailyMap = this.userService.fetchLootActivity(discordTag);
         final var lastAdvice = (LocalDate) this.memoryCache.getOrDefault(CacheEntry.LAST_ADVICE_DATE, LocalDate.now().minusDays(1));
 
         if(lastAdvice.isBefore(LocalDate.now()))
             this.memoryCache.put(CacheEntry.TODAY_ASCENSIONS, new AtomicInteger(0));
 
         final var todayAscensions = (AtomicInteger) this.memoryCache.getOrDefault(CacheEntry.TODAY_ASCENSIONS, new AtomicInteger(0));
-        final var state = new ProjectionState(user, activeEvents, todayAscensions, allItems, config);
+        final var state = new ProjectionState(
+            user,
+            activeEvents,
+            todayAscensions,
+            allItems,
+            config,
+            challenges,
+            dailyMap
+        );
 
         this.recursiveProjection(actions, state);
 
@@ -96,6 +108,7 @@ public class ProjectionServiceImpl implements ProjectionService {
 
 
     private void recursiveProjection(final ActionList actions, final ProjectionState state) {
+        this.projectDaily(actions, state);
         this.projectRecycle(actions, state, false);
         this.projectRecycle(actions, state, true);
         this.projectFusions(actions, state, false);
@@ -105,21 +118,49 @@ public class ProjectionServiceImpl implements ProjectionService {
         this.projectInvocation(actions, state);
         this.projectCraft(actions, state);
         this.projectAscension(actions, state);
+        this.projectChallenges(actions, state);
 
         if(actions.hasChanged())
             this.recursiveProjection(actions.newCycle(), state);
     }
 
     private boolean goalFilter(final Map<String, ItemProjection> inventory, final FusionProjection projection) {
-        final var iProj = Optional.ofNullable(inventory.getOrDefault(projection.getFusion().getResult().getId(), null));
-        final var hasItem = iProj.isPresent() && iProj.get().getQuantity() > 0;
+        if(this.projectionGoal.equalsIgnoreCase("collection")) {
+            final var iProj = Optional.ofNullable(inventory.getOrDefault(projection.getFusion().getResult().getId(), null));
+            final var hasItem = iProj.isPresent() && iProj.get().getQuantity() > 0;
 
-        if(this.projectionGoal.equalsIgnoreCase("collection"))
             return !projection.isSolved() && !hasItem;
+        }
 
         return true;
     }
 
+
+    private void projectDaily(final ActionList actions, final ProjectionState state) {
+        final var today = LocalDate.now();
+        final var format = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+        var todayDaily = state.getDailyMap().getOrDefault(today.format(format), 0);
+
+        if(todayDaily > 1)
+            return;
+
+        if(todayDaily == 0) {
+            actions.addElement(ActionType.DAILY, null, 1);
+            state.getBalance().getAndAdd(DAILY_REWARD);
+            state.getDailyMap().put(today.format(format), ++todayDaily);
+        }
+
+        var prev = today;
+        for(int i = 0; i < 7; i++) {
+            prev = prev.minusDays(1);
+            if(state.getDailyMap().getOrDefault(prev.format(format), 0) == 0)
+                return;
+        }
+
+        actions.addElement(ActionType.WEEKLY, null, 1);
+        state.getBalance().getAndAdd(DAILY_REWARD);
+        state.getDailyMap().put(today.format(format), ++todayDaily);
+    }
 
     private void projectFusions(final ActionList actions, final ProjectionState state, final boolean golden) {
         final var projections = golden ? state.getGoldenFusions() : state.getNormalFusions();
@@ -135,20 +176,6 @@ public class ProjectionServiceImpl implements ProjectionService {
             projections.set(p);
         }
 
-        //Prioritize events fusions because it's the only period we can craft their missing inputs.
-        if(!state.getActiveEvents().isEmpty()) {
-            state.getActiveEvents().forEach(e -> projections.get().stream()
-                .filter(p -> p.getFusion().getResult().getPack().getId().equals(e.getPackId()) &&
-                    this.goalFilter(inventory, p)
-                ).sorted(comparator).forEach(p -> {
-                    if(p.getDoability() >= 100)
-                        this.solvedFusion(actions, p, state);
-                    else
-                        this.tryFillMissing(actions, p, state);
-                }));
-        }
-
-        //TODO: allow to redo fusion, only when inputs aren't used by other fusions OR other fusions result is already in inventory (recursive)
         projections.get().stream()
             .filter(p -> this.goalFilter(inventory, p))
             .sorted(comparator).forEach(p -> {
@@ -172,8 +199,6 @@ public class ProjectionServiceImpl implements ProjectionService {
 
             if(i.isCraftable())
                 craftable.incrementAndGet();
-
-            //TODO: can input be made by another cheaper fusion ?
         });
 
         if(money.get() > cost.get() && craftable.get() == projection.getMissingItems().size()) {
@@ -198,7 +223,11 @@ public class ProjectionServiceImpl implements ProjectionService {
                     throw new ProjectionException("No no no, you have no inventory entry for that item.");
 
                 final var iProj = projection.getSharedInventory().get(input.getItem().getId());
-                if(iProj.getQuantity() < input.getQuantity())
+                final var quantity = this.projectionGoal.equalsIgnoreCase("collection") ?
+                    iProj.getQuantity() - 1 :
+                    iProj.getQuantity();
+
+                if(quantity < input.getQuantity())
                     throw new ProjectionException("Not enough available items.");
 
                 toConsume.put(iProj, input.getQuantity());
@@ -299,6 +328,13 @@ public class ProjectionServiceImpl implements ProjectionService {
             state.getLoreDust().getAndAdd(-ASCENSION_COST);
             state.getAscensionsCount().getAndIncrement();
         }
+    }
+
+
+    private void projectChallenges(final ActionList actions, final ProjectionState state) {
+
+
+        state.getChallenges();
     }
 
 

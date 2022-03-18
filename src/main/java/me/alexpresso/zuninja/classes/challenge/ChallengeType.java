@@ -17,7 +17,7 @@ public enum ChallengeType {
     INVOKE_ITEMS,
     TRADE_USERS,
     LUCKY(ActionType.LUCKY_RAYOU),
-    WEEKLY,
+    WEEKLY(ActionType.WEEKLY),
     UNKNOWN;
 
 

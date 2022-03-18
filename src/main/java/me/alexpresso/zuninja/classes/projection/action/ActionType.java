@@ -2,12 +2,14 @@ package me.alexpresso.zuninja.classes.projection.action;
 
 public enum ActionType {
     RECYCLE("recyclage"),
-    CRAFT("creation"),
+    CRAFT("création"),
     ENCHANT("enchantement"),
     FUSION("fusion"),
     INVOCATION("im"),
     ASCENSION("as"),
     LUCKY_RAYOU("lr"),
+    DAILY("journa"),
+    WEEKLY("bonus"),
     SUBSCRIBE;
 
     private final String command;

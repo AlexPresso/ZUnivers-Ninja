@@ -1,5 +1,6 @@
 package me.alexpresso.zuninja.classes.projection;
 
+import me.alexpresso.zuninja.classes.challenge.Challenge;
 import me.alexpresso.zuninja.classes.config.Config;
 import me.alexpresso.zuninja.classes.config.ConfigPart;
 import me.alexpresso.zuninja.domain.nodes.event.Event;
@@ -24,13 +25,17 @@ public class ProjectionState {
     private final List<Item> allItems;
     private final Config config;
     private final AtomicBoolean subscribed;
+    private final Set<Challenge> challenges;
+    private final Map<String, Integer> dailyMap;
 
 
     public ProjectionState(final User user,
                            final Set<Event> activeEvents,
                            final AtomicInteger ascensionsCount,
                            final List<Item> allItems,
-                           final Config config) {
+                           final Config config,
+                           final Set<Challenge> challenges,
+                           final Map<String, Integer> dailyMap) {
         this.inventory = new InventoryProjection(user);
         this.loreDust = new AtomicInteger(user.getLoreDust());
         this.loreFragment = new AtomicInteger(user.getLoreFragment());
@@ -43,6 +48,8 @@ public class ProjectionState {
         this.allItems = allItems;
         this.config = config;
         this.subscribed = new AtomicBoolean(user.getStatistics().isSubscribed());
+        this.challenges = challenges;
+        this.dailyMap = dailyMap;
     }
 
 
@@ -99,5 +106,13 @@ public class ProjectionState {
         return item.getPack().getName().equalsIgnoreCase("classique") ?
             this.loreDust :
             this.loreFragment;
+    }
+
+    public Set<Challenge> getChallenges() {
+        return this.challenges;
+    }
+
+    public Map<String, Integer> getDailyMap() {
+        return this.dailyMap;
     }
 }
