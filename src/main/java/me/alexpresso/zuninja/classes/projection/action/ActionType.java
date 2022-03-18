@@ -7,7 +7,7 @@ public enum ActionType {
     FUSION("fusion"),
     INVOCATION("im"),
     ASCENSION("as"),
-    LUCKY_RAYOU("lr"),
+    LUCKY_RAYOU("lrlien"),
     DAILY("journa"),
     WEEKLY("bonus"),
     SUBSCRIBE;
