@@ -29,6 +29,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -82,6 +83,7 @@ public class ProjectionServiceImpl implements ProjectionService {
         final var lastAdvice = (LocalDate) this.memoryCache.getOrDefault(CacheEntry.LAST_ADVICE_DATE, LocalDate.now().minusDays(1));
         final var challenges = this.userService.fetchUserChallenges(discordTag).stream()
             .filter(c -> c.getType().getActionType().isPresent())
+            .filter(c -> c.getProgress().getCurrent() < c.getProgress().getMax())
             .collect(Collectors.toSet());
 
         if(lastAdvice.isBefore(LocalDate.now()))
@@ -95,7 +97,7 @@ public class ProjectionServiceImpl implements ProjectionService {
         this.memoryCache.put(CacheEntry.LAST_ADVICE_DATE, LocalDate.now())
             .put(CacheEntry.TODAY_ASCENSIONS, state.getAscensionsCount());
 
-        return this.makeSummary(actions, user, state, challenges);
+        return this.makeSummary(actions, user, state, discordTag);
     }
 
 
@@ -459,10 +461,16 @@ public class ProjectionServiceImpl implements ProjectionService {
     private ProjectionSummary makeSummary(final ActionList actions,
                                           final User user,
                                           final ProjectionState state,
-                                          final Set<Challenge> initChallenges) {
+                                          final String discordTag) throws IOException, InterruptedException {
         final var summary = new ProjectionSummary(actions);
         final var oldInventory = new InventoryProjection(user);
         final var newInventory = state.getInventory();
+        final var initChallenges = this.userService.fetchUserChallenges(discordTag).stream()
+            .filter(c -> c.getType().getActionType().isPresent())
+            .filter(c -> c.getProgress().getCurrent() < c.getProgress().getMax())
+            .collect(Collectors.toSet());
+        final var stateChallenges = state.getChallenges().stream()
+            .collect(Collectors.toMap(Challenge::getId, Function.identity()));
 
         summary.put("Poudre créatrice", new Change(user.getLoreDust(), state.getLoreDust().get()));
         summary.put("Cristaux d'histoire", new Change(user.getLoreFragment(), state.getLoreFragment().get()));
@@ -470,6 +478,18 @@ public class ProjectionServiceImpl implements ProjectionService {
         summary.put("Cartes normales", new Change(oldInventory.getNormalCount(), newInventory.getNormalCount()));
         summary.put("Cartes dorées", new Change(oldInventory.getGoldenCount(), newInventory.getGoldenCount()));
         summary.put("Z Monnaie", new Change(user.getBalance(), state.getBalance().get()));
+
+        initChallenges.forEach(c -> {
+            final var stateChall = stateChallenges.get(c.getId());
+
+            summary.put(
+                String.format("Challenge \"%s\"", c.getDescription()),
+                new Change(
+                    String.format("%s/%s", c.getProgress().getCurrent(), c.getProgress().getMax()),
+                    String.format("%s/%s", stateChall.getProgress().getCurrent(), stateChall.getProgress().getMax())
+                )
+            );
+        });
 
         return summary;
     }
