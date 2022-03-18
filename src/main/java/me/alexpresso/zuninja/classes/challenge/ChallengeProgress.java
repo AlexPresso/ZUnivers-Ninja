@@ -15,6 +15,10 @@ public class ChallengeProgress {
     public int getCurrent() {
         return this.current;
     }
+    public ChallengeProgress setCurrent(final int progress) {
+        this.current = progress;
+        return this;
+    }
 
     public int getMax() {
         return this.max;
