@@ -194,6 +194,7 @@ public class ProjectionServiceImpl implements ProjectionService {
         final var cost = new AtomicInteger(0);
         final var craftable = new AtomicInteger(0);
         final var money = state.getMoneyFor(projection.getFusion().getResult());
+        final var vortexPack = this.memoryCache.getOrDefault(CacheEntry.CURRENT_VORTEX_PACK, "");
 
         projection.getMissingItems().forEach((i, q) -> {
             cost.getAndAdd(state.getConfigFor(i.getRarity(), false).getCraftValue() * q);
@@ -201,7 +202,7 @@ public class ProjectionServiceImpl implements ProjectionService {
             if(projection.isGolden())
                 cost.getAndAdd(state.getConfigFor(i.getRarity(), true).getCraftValue() * q);
 
-            if(i.isCraftable())
+            if(i.isCraftable() && (i.getPack().getId().equals(vortexPack) || i.getPack().getName().equalsIgnoreCase("classique")))
                 craftable.incrementAndGet();
         });
 
