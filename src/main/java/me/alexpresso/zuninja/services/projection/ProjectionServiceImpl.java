@@ -147,7 +147,9 @@ public class ProjectionServiceImpl implements ProjectionService {
 
         var prev = today;
         for(int i = 0; i < 7; i++) {
-            if(state.getDailyMap().getOrDefault(prev.format(format), 0) == 0)
+            final var claimed = state.getDailyMap().getOrDefault(prev.format(format), 0);
+
+            if(claimed == 0 || claimed > 1)
                 return;
 
             prev = prev.minusDays(1);
