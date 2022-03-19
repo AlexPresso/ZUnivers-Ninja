@@ -17,6 +17,7 @@ import me.alexpresso.zuninja.repositories.FusionRepository;
 import me.alexpresso.zuninja.repositories.ItemRepository;
 import me.alexpresso.zuninja.services.config.ConfigService;
 import me.alexpresso.zuninja.services.user.UserService;
+import me.alexpresso.zuninja.services.vortex.VortexService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -42,6 +43,7 @@ public class ProjectionServiceImpl implements ProjectionService {
     private final EventRepository eventRepository;
     private final ItemRepository itemRepository;
     private final ConfigService configService;
+    private final VortexService vortexService;
     private final MemoryCache memoryCache;
 
     private final static int ASCENSION_COST = 20;
@@ -60,12 +62,14 @@ public class ProjectionServiceImpl implements ProjectionService {
                                  final EventRepository er,
                                  final MemoryCache mc,
                                  final ConfigService cs,
+                                 final VortexService vs,
                                  final ItemRepository ir) {
         this.fusionRepository = fr;
         this.userService = us;
         this.eventRepository = er;
         this.memoryCache = mc;
         this.configService = cs;
+        this.vortexService = vs;
         this.itemRepository = ir;
     }
 
@@ -85,6 +89,8 @@ public class ProjectionServiceImpl implements ProjectionService {
             .filter(c -> c.getType().getActionType().isPresent())
             .filter(c -> c.getProgress().getCurrent() < c.getProgress().getMax())
             .collect(Collectors.toSet());
+
+        this.memoryCache.put(CacheEntry.CURRENT_VORTEX_PACK, this.vortexService.fetchCurrentVortexPack());
 
         if(lastAdvice.isBefore(LocalDate.now()))
             this.memoryCache.put(CacheEntry.TODAY_ASCENSIONS, new AtomicInteger(0));
@@ -343,7 +349,9 @@ public class ProjectionServiceImpl implements ProjectionService {
     }
 
     private void tryCraft(final ActionList actions, final Item i, final Map<String, ItemProjection> inventory, final ProjectionState state) {
-        if(!i.isCraftable())
+        final var vortexPack = this.memoryCache.getOrDefault(CacheEntry.CURRENT_VORTEX_PACK, "");
+
+        if(!i.isCraftable() || (!i.getPack().getId().equals(vortexPack) && !i.getPack().getName().equalsIgnoreCase("classique")))
             return;
 
         final var ownedQuantity = inventory.containsKey(i.getId()) ? inventory.get(i.getId()).getQuantity() : 0;

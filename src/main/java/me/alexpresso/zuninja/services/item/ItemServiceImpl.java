@@ -68,7 +68,7 @@ public class ItemServiceImpl implements ItemService {
         final var packs = items.stream()
             .map(Item::getPack)
             .filter(StreamUtils.distinctByKey(Pack::getId))
-            .collect(Collectors.toMap(Pack::getId, p -> dbPacks.getOrDefault(p.getId(), p).setName(p.getName()).setCraftable(p.getName().equalsIgnoreCase("vanilla"))));
+            .collect(Collectors.toMap(Pack::getId, p -> dbPacks.getOrDefault(p.getId(), p).setName(p.getName())));
         final var count = new AtomicInteger(1);
 
         items.parallelStream().forEach(item -> {
