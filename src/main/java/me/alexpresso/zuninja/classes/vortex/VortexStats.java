@@ -9,8 +9,8 @@ import java.util.Map;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class VortexStats {
 
-    private int maxCount;
-    private int itemCount;
+    private int maxCount = 0;
+    private int itemCount = 0;
 
 
     public int getMaxCount() {
