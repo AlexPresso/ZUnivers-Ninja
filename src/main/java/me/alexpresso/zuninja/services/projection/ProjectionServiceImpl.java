@@ -84,6 +84,7 @@ public class ProjectionServiceImpl implements ProjectionService {
         final var allItems = this.itemRepository.findAll();
         final var config = this.configService.fetchConfiguration();
         final var dailyMap = this.userService.fetchLootActivity(discordTag);
+        final var vortexStats = this.vortexService.fetchUserVortexStats(discordTag);
         final var lastAdvice = (LocalDate) this.memoryCache.getOrDefault(CacheEntry.LAST_ADVICE_DATE, LocalDate.now().minusDays(1));
         final var challenges = this.userService.fetchUserChallenges(discordTag).stream()
             .filter(c -> c.getType().getActionType().isPresent())
@@ -96,7 +97,7 @@ public class ProjectionServiceImpl implements ProjectionService {
             this.memoryCache.put(CacheEntry.TODAY_ASCENSIONS, new AtomicInteger(0));
 
         final var todayAscensions = (AtomicInteger) this.memoryCache.getOrDefault(CacheEntry.TODAY_ASCENSIONS, new AtomicInteger(0));
-        final var state = new ProjectionState(user, activeEvents, todayAscensions, allItems, config, challenges, dailyMap);
+        final var state = new ProjectionState(user, activeEvents, vortexStats, todayAscensions,  allItems, config, challenges, dailyMap);
 
         this.recursiveProjection(actions, state);
 
@@ -113,7 +114,7 @@ public class ProjectionServiceImpl implements ProjectionService {
         this.projectRecycle(actions, state, true);
         this.projectFusions(actions, state, false);
         this.projectFusions(actions, state, true);
-        this.projectSubscription(actions, state);
+        //this.projectSubscription(actions, state);
         this.projectUpgrades(actions, state);
         this.projectInvocation(actions, state);
         this.projectCraft(actions, state);
@@ -329,11 +330,17 @@ public class ProjectionServiceImpl implements ProjectionService {
 
 
     private void projectAscension(final ActionList actions, final ProjectionState state) {
-        if(state.getLoreDust().get() >= ASCENSION_COST && state.getAscensionsCount().get() < PER_DAY_ASCENSIONS) {
-            this.addAction(state, actions, ActionType.ASCENSION, null, 1);
-            state.getLoreDust().getAndAdd(-ASCENSION_COST);
-            state.getAscensionsCount().getAndIncrement();
-        }
+        if(state.getLoreDust().get() < ASCENSION_COST || state.getAscensionsCount().get() > PER_DAY_ASCENSIONS)
+            return;
+
+        final var vortexStats = state.getVortexStats();
+
+        if(vortexStats.getItemCount() >= vortexStats.getMaxCount())
+            return;
+
+        this.addAction(state, actions, ActionType.ASCENSION, null, 1);
+        state.getLoreDust().getAndAdd(-ASCENSION_COST);
+        state.getAscensionsCount().getAndIncrement();
     }
 
 

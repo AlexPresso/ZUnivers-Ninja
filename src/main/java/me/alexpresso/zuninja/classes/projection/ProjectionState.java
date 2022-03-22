@@ -3,6 +3,7 @@ package me.alexpresso.zuninja.classes.projection;
 import me.alexpresso.zuninja.classes.challenge.Challenge;
 import me.alexpresso.zuninja.classes.config.Config;
 import me.alexpresso.zuninja.classes.config.ConfigPart;
+import me.alexpresso.zuninja.classes.vortex.VortexStats;
 import me.alexpresso.zuninja.domain.nodes.event.Event;
 import me.alexpresso.zuninja.domain.nodes.item.Item;
 import me.alexpresso.zuninja.domain.nodes.user.User;
@@ -18,6 +19,7 @@ public class ProjectionState {
     private final AtomicInteger loreFragment;
     private final AtomicInteger balance;
     private final AtomicInteger score;
+    private final VortexStats vortexStats;
     private final AtomicInteger ascensionsCount;
     private final AtomicReference<Set<FusionProjection>> normalFusions;
     private final AtomicReference<Set<FusionProjection>> goldenFusions;
@@ -31,6 +33,7 @@ public class ProjectionState {
 
     public ProjectionState(final User user,
                            final Set<Event> activeEvents,
+                           final VortexStats vortexStats,
                            final AtomicInteger ascensionsCount,
                            final List<Item> allItems,
                            final Config config,
@@ -42,6 +45,7 @@ public class ProjectionState {
         this.balance = new AtomicInteger(user.getBalance());
         this.score = new AtomicInteger(user.getScore());
         this.ascensionsCount = ascensionsCount;
+        this.vortexStats = vortexStats;
         this.normalFusions = new AtomicReference<>(null);
         this.goldenFusions = new AtomicReference<>(null);
         this.activeEvents = activeEvents;
@@ -71,6 +75,10 @@ public class ProjectionState {
 
     public AtomicInteger getScore() {
         return this.score;
+    }
+
+    public VortexStats getVortexStats() {
+        return this.vortexStats;
     }
 
     public AtomicInteger getAscensionsCount() {
