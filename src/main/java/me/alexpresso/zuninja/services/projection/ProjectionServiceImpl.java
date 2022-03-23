@@ -211,9 +211,9 @@ public class ProjectionServiceImpl implements ProjectionService {
             projection.getMissingItems().forEach((i, q) -> {
                 this.produceItem(state, i, q, projection.isGolden());
 
-                this.addAction(state, actions, ActionType.CRAFT, i, q, projection.isGolden());
+                this.addAction(state, actions, ActionType.CRAFT, i, q);
                 if(projection.isGolden()) {
-                    this.addAction(state, actions, ActionType.ENCHANT, i, q, projection.isGolden());
+                    this.addAction(state, actions, ActionType.ENCHANT, i, q);
                 }
             });
 
@@ -247,7 +247,7 @@ public class ProjectionServiceImpl implements ProjectionService {
 
             state.getScore().getAndAdd(projection.getProfit());
             projection.setSolved(true);
-            this.addAction(state, actions, ActionType.FUSION, projection, 1, projection.isGolden());
+            this.addAction(state, actions, ActionType.FUSION, projection, 1);
 
             logger.debug("Solved fusion {}", projection.getIdentifier());
         } catch (ProjectionException e) {
@@ -288,7 +288,7 @@ public class ProjectionServiceImpl implements ProjectionService {
                 this.consumeItem(state, itemProj.getItem(), false);
                 this.produceItem(state, itemProj.getItem(), true);
 
-                this.addAction(state, actions, ActionType.ENCHANT, itemProj, 1, false);
+                this.addAction(state, actions, ActionType.ENCHANT, itemProj, 1);
 
                 money.getAndAdd(-cost);
             } catch (ProjectionException e) {
@@ -406,7 +406,7 @@ public class ProjectionServiceImpl implements ProjectionService {
         });
 
         if(!toRecycle.isEmpty())
-            this.addAction(state, actions, ActionType.RECYCLE, toRecycle, 1, golden);
+            this.addAction(state, actions, ActionType.RECYCLE, toRecycle, 1);
     }
 
 
@@ -414,16 +414,15 @@ public class ProjectionServiceImpl implements ProjectionService {
                            final ActionList actions,
                            final ActionType type,
                            final ActionElement element) {
-        this.addAction(state, actions, type, element, 1, false);
+        this.addAction(state, actions, type, element, 1);
     }
     private void addAction(final ProjectionState state,
                            final ActionList actions,
                            final ActionType type,
                            final ActionElement element,
-                           final int count,
-                           final boolean golden) {
+                           final int count) {
         actions.addElement(type, element, count);
-        this.progressChallenges(state, type, this.getProgress(state, type, element, count, golden));
+        this.progressChallenges(state, type, this.getProgress(state, type, element, count));
     }
 
     private void consumeItem(final ProjectionState state, final Item item, final boolean golden) throws ProjectionException {
@@ -487,11 +486,13 @@ public class ProjectionServiceImpl implements ProjectionService {
     private int getProgress(final ProjectionState state,
                             final ActionType type,
                             final ActionElement element,
-                            final int count,
-                            final boolean golden) {
+                            final int count) {
         switch(type) {
             case RECYCLE:
-                return state.getConfigFor(((Item) element).getRarity(), golden).getCraftValue();
+                return ((ActionElementList) element).stream()
+                    .map(RecycleElement.class::cast)
+                    .map(e -> state.getConfigFor(e.getItem().getRarity(), e.isGolden()).getRecycleValue())
+                    .reduce(0, Integer::sum);
             case INVOCATION:
                 return 10;
             default:
