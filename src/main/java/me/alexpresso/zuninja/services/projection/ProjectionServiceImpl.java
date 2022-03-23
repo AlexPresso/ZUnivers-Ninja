@@ -146,8 +146,8 @@ public class ProjectionServiceImpl implements ProjectionService {
             return;
 
         if(todayDaily == 0) {
-            this.addAction(state, actions, ActionType.DAILY, null, 1);
-            this.addAction(state, actions, ActionType.LUCKY_RAYOU, null, 1);
+            this.addAction(state, actions, ActionType.DAILY, null);
+            this.addAction(state, actions, ActionType.LUCKY_RAYOU, null);
             state.getBalance().getAndAdd(DAILY_REWARD);
             state.getDailyMap().put(today.format(format), ++todayDaily);
         }
@@ -162,7 +162,7 @@ public class ProjectionServiceImpl implements ProjectionService {
             prev = prev.minusDays(1);
         }
 
-        this.addAction(state, actions, ActionType.WEEKLY, null, 1);
+        this.addAction(state, actions, ActionType.WEEKLY, null);
         state.getBalance().getAndAdd(DAILY_REWARD);
         state.getDailyMap().put(today.format(format), ++todayDaily);
     }
@@ -211,9 +211,9 @@ public class ProjectionServiceImpl implements ProjectionService {
             projection.getMissingItems().forEach((i, q) -> {
                 this.produceItem(state, i, q, projection.isGolden());
 
-                this.addAction(state, actions, ActionType.CRAFT, i, q);
+                this.addAction(state, actions, ActionType.CRAFT, i, q, projection.isGolden());
                 if(projection.isGolden()) {
-                    this.addAction(state, actions, ActionType.ENCHANT, i, q);
+                    this.addAction(state, actions, ActionType.ENCHANT, i, q, projection.isGolden());
                 }
             });
 
@@ -247,7 +247,7 @@ public class ProjectionServiceImpl implements ProjectionService {
 
             state.getScore().getAndAdd(projection.getProfit());
             projection.setSolved(true);
-            this.addAction(state, actions, ActionType.FUSION, projection, 1);
+            this.addAction(state, actions, ActionType.FUSION, projection, 1, projection.isGolden());
 
             logger.debug("Solved fusion {}", projection.getIdentifier());
         } catch (ProjectionException e) {
@@ -264,7 +264,7 @@ public class ProjectionServiceImpl implements ProjectionService {
         //TODO: Auto subscription + Keycloak auth negociation
 
         state.getLoreDust().getAndAdd(-SUBSCRIPTION_COST);
-        this.addAction(state, actions, ActionType.SUBSCRIBE, null, 1);
+        this.addAction(state, actions, ActionType.SUBSCRIBE, null);
         state.getSubscribed().set(true);
     }
 
@@ -288,7 +288,7 @@ public class ProjectionServiceImpl implements ProjectionService {
                 this.consumeItem(state, itemProj.getItem(), false);
                 this.produceItem(state, itemProj.getItem(), true);
 
-                this.addAction(state, actions, ActionType.ENCHANT, itemProj, 1);
+                this.addAction(state, actions, ActionType.ENCHANT, itemProj, 1, false);
 
                 money.getAndAdd(-cost);
             } catch (ProjectionException e) {
@@ -308,7 +308,7 @@ public class ProjectionServiceImpl implements ProjectionService {
                     return;
 
                 if(state.getBalance().get() >= e.getBalanceCost()) {
-                    this.addAction(state, actions, ActionType.INVOCATION, e, 1);
+                    this.addAction(state, actions, ActionType.INVOCATION, e);
                     state.getBalance().getAndAdd(-e.getBalanceCost());
                 }
 
@@ -323,7 +323,7 @@ public class ProjectionServiceImpl implements ProjectionService {
         }
 
         if(state.getBalance().get() >= INVOCATION_COST) {
-            this.addAction(state, actions, ActionType.INVOCATION, null, 1);
+            this.addAction(state, actions, ActionType.INVOCATION, null);
             state.getBalance().getAndAdd(-INVOCATION_COST);
         }
     }
@@ -338,7 +338,7 @@ public class ProjectionServiceImpl implements ProjectionService {
         if(vortexStats.getItemCount() >= vortexStats.getMaxCount())
             return;
 
-        this.addAction(state, actions, ActionType.ASCENSION, null, 1);
+        this.addAction(state, actions, ActionType.ASCENSION, null);
         state.getLoreDust().getAndAdd(-ASCENSION_COST);
         state.getAscensionsCount().getAndIncrement();
     }
@@ -371,7 +371,7 @@ public class ProjectionServiceImpl implements ProjectionService {
 
         this.produceItem(state, i, false);
         money.getAndAdd(-cost);
-        this.addAction(state, actions, ActionType.CRAFT, i, 1);
+        this.addAction(state, actions, ActionType.CRAFT, i);
     }
 
 
@@ -406,17 +406,24 @@ public class ProjectionServiceImpl implements ProjectionService {
         });
 
         if(!toRecycle.isEmpty())
-            this.addAction(state, actions, ActionType.RECYCLE, toRecycle, 1);
+            this.addAction(state, actions, ActionType.RECYCLE, toRecycle, 1, golden);
     }
 
 
     private void addAction(final ProjectionState state,
                            final ActionList actions,
                            final ActionType type,
+                           final ActionElement element) {
+        this.addAction(state, actions, type, element, 1, false);
+    }
+    private void addAction(final ProjectionState state,
+                           final ActionList actions,
+                           final ActionType type,
                            final ActionElement element,
-                           final int count) {
+                           final int count,
+                           final boolean golden) {
         actions.addElement(type, element, count);
-        this.progressChallenges(state, type, count);
+        this.progressChallenges(state, type, this.getProgress(state, type, element, count, golden));
     }
 
     private void consumeItem(final ProjectionState state, final Item item, final boolean golden) throws ProjectionException {
@@ -477,6 +484,21 @@ public class ProjectionServiceImpl implements ProjectionService {
                 }
             });
     }
+    private int getProgress(final ProjectionState state,
+                            final ActionType type,
+                            final ActionElement element,
+                            final int count,
+                            final boolean golden) {
+        switch(type) {
+            case RECYCLE:
+                return state.getConfigFor(((Item) element).getRarity(), golden).getCraftValue();
+            case INVOCATION:
+                return 10;
+            default:
+                return count;
+        }
+    }
+
 
     private ProjectionSummary makeSummary(final ActionList actions,
                                           final User user,
