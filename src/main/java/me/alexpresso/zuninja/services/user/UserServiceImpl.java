@@ -1,6 +1,9 @@
 package me.alexpresso.zuninja.services.user;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import me.alexpresso.zuninja.classes.activity.ActivityDetail;
+import me.alexpresso.zuninja.classes.challenge.Challenge;
+import me.alexpresso.zuninja.classes.challenge.ChallengeType;
 import me.alexpresso.zuninja.domain.nodes.item.Item;
 import me.alexpresso.zuninja.domain.nodes.user.User;
 import me.alexpresso.zuninja.domain.nodes.user.UserStatistics;
@@ -17,7 +20,9 @@ import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -78,6 +83,7 @@ public class UserServiceImpl implements UserService {
 
         user.setStatistics(user.getStatistics() == null ? statistics : user.getStatistics())
             .setLoreDust(statistics.getUser().getLoreDust())
+            .setLoreFragment(statistics.getUser().getLoreFragment())
             .setBalance(statistics.getUser().getBalance())
             .setScore(statistics.getUser().getScore())
             .setPosition(statistics.getUser().getPosition())
@@ -92,5 +98,25 @@ public class UserServiceImpl implements UserService {
         this.userRepository.save(user);
 
         logger.debug("Updated {}'s inventory.", discordTag);
+    }
+
+    @Override
+    public Set<Challenge> fetchUserChallenges(final String discordTag) throws IOException, InterruptedException {
+        return (Set<Challenge>) this.requestService.request(
+            String.format("/public/challenge/%s", URLEncoder.encode(discordTag, StandardCharsets.UTF_8)),
+            "GET",
+            new TypeReference<Set<Challenge>>() {}
+        );
+    }
+
+    @Override
+    public Map<String, Integer> fetchLootActivity(final String discordTag) throws IOException, InterruptedException {
+        final var activity = (ActivityDetail) this.requestService.request(
+            String.format("/public/user/%s/activity", URLEncoder.encode(discordTag, StandardCharsets.UTF_8)),
+            "GET",
+            new TypeReference<ActivityDetail>() {}
+        );
+
+        return activity.getLootInfos();
     }
 }

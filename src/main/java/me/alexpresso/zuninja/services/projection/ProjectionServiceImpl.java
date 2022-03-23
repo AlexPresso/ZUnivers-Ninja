@@ -1,15 +1,12 @@
 package me.alexpresso.zuninja.services.projection;
 
-import me.alexpresso.zuninja.classes.projection.summary.Change;
 import me.alexpresso.zuninja.classes.cache.CacheEntry;
 import me.alexpresso.zuninja.classes.cache.MemoryCache;
+import me.alexpresso.zuninja.classes.challenge.Challenge;
 import me.alexpresso.zuninja.classes.projection.*;
-import me.alexpresso.zuninja.classes.projection.action.Action;
-import me.alexpresso.zuninja.classes.projection.action.ActionElementList;
-import me.alexpresso.zuninja.classes.projection.action.ActionList;
-import me.alexpresso.zuninja.classes.projection.action.ActionType;
+import me.alexpresso.zuninja.classes.projection.action.*;
 import me.alexpresso.zuninja.classes.projection.recycle.RecycleElement;
-import me.alexpresso.zuninja.domain.nodes.event.Event;
+import me.alexpresso.zuninja.classes.projection.summary.Change;
 import me.alexpresso.zuninja.domain.nodes.item.Item;
 import me.alexpresso.zuninja.domain.nodes.user.User;
 import me.alexpresso.zuninja.domain.relations.InputToFusion;
@@ -20,6 +17,7 @@ import me.alexpresso.zuninja.repositories.FusionRepository;
 import me.alexpresso.zuninja.repositories.ItemRepository;
 import me.alexpresso.zuninja.services.config.ConfigService;
 import me.alexpresso.zuninja.services.user.UserService;
+import me.alexpresso.zuninja.services.vortex.VortexService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -28,10 +26,11 @@ import org.springframework.stereotype.Service;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Predicate;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -44,11 +43,15 @@ public class ProjectionServiceImpl implements ProjectionService {
     private final EventRepository eventRepository;
     private final ItemRepository itemRepository;
     private final ConfigService configService;
+    private final VortexService vortexService;
     private final MemoryCache memoryCache;
 
     private final static int ASCENSION_COST = 20;
+    private final static int INVOCATION_COST = 1000;
     private final static int PER_DAY_ASCENSIONS = 2;
     private final static int UNICITY_BONUS = 6;
+    private final static int SUBSCRIPTION_COST = 4000;
+    private final static int DAILY_REWARD = 1200;
 
     @Value(value = "${goal:score}")
     private String projectionGoal;
@@ -59,12 +62,14 @@ public class ProjectionServiceImpl implements ProjectionService {
                                  final EventRepository er,
                                  final MemoryCache mc,
                                  final ConfigService cs,
+                                 final VortexService vs,
                                  final ItemRepository ir) {
         this.fusionRepository = fr;
         this.userService = us;
         this.eventRepository = er;
         this.memoryCache = mc;
         this.configService = cs;
+        this.vortexService = vs;
         this.itemRepository = ir;
     }
 
@@ -78,35 +83,88 @@ public class ProjectionServiceImpl implements ProjectionService {
         final var activeEvents = this.eventRepository.findEventsAtDate(LocalDateTime.now());
         final var allItems = this.itemRepository.findAll();
         final var config = this.configService.fetchConfiguration();
+        final var dailyMap = this.userService.fetchLootActivity(discordTag);
+        final var vortexStats = this.vortexService.fetchUserVortexStats(discordTag);
         final var lastAdvice = (LocalDate) this.memoryCache.getOrDefault(CacheEntry.LAST_ADVICE_DATE, LocalDate.now().minusDays(1));
+        final var challenges = this.userService.fetchUserChallenges(discordTag).stream()
+            .filter(c -> c.getType().getActionType().isPresent())
+            .filter(c -> c.getProgress().getCurrent() < c.getProgress().getMax())
+            .collect(Collectors.toSet());
+
+        this.memoryCache.put(CacheEntry.CURRENT_VORTEX_PACK, this.vortexService.fetchCurrentVortexPack());
 
         if(lastAdvice.isBefore(LocalDate.now()))
             this.memoryCache.put(CacheEntry.TODAY_ASCENSIONS, new AtomicInteger(0));
 
         final var todayAscensions = (AtomicInteger) this.memoryCache.getOrDefault(CacheEntry.TODAY_ASCENSIONS, new AtomicInteger(0));
-        final var state = new ProjectionState(user, activeEvents, todayAscensions, allItems, config);
+        final var state = new ProjectionState(user, activeEvents, vortexStats, todayAscensions,  allItems, config, challenges, dailyMap);
 
         this.recursiveProjection(actions, state);
 
         this.memoryCache.put(CacheEntry.LAST_ADVICE_DATE, LocalDate.now())
             .put(CacheEntry.TODAY_ASCENSIONS, state.getAscensionsCount());
 
-        return this.makeSummary(actions, user, state);
+        return this.makeSummary(actions, user, state, discordTag);
     }
 
 
     private void recursiveProjection(final ActionList actions, final ProjectionState state) {
+        this.projectDaily(actions, state);
         this.projectRecycle(actions, state, false);
         this.projectRecycle(actions, state, true);
         this.projectFusions(actions, state, false);
         this.projectFusions(actions, state, true);
+        //this.projectSubscription(actions, state);
         this.projectUpgrades(actions, state);
         this.projectInvocation(actions, state);
         this.projectCraft(actions, state);
         this.projectAscension(actions, state);
+        this.projectChallenges(actions, state);
 
         if(actions.hasChanged())
             this.recursiveProjection(actions.newCycle(), state);
+    }
+
+    private boolean goalFilter(final Map<String, ItemProjection> inventory, final FusionProjection projection) {
+        if(this.projectionGoal.equalsIgnoreCase("collection")) {
+            final var iProj = Optional.ofNullable(inventory.getOrDefault(projection.getFusion().getResult().getId(), null));
+            final var hasItem = iProj.isPresent() && iProj.get().getQuantity() > 0;
+
+            return !projection.isSolved() && !hasItem;
+        }
+
+        return true;
+    }
+
+
+    private void projectDaily(final ActionList actions, final ProjectionState state) {
+        final var today = LocalDate.now();
+        final var format = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+        var todayDaily = state.getDailyMap().getOrDefault(today.format(format), 0);
+
+        if(todayDaily > 1)
+            return;
+
+        if(todayDaily == 0) {
+            this.addAction(state, actions, ActionType.DAILY, null);
+            this.addAction(state, actions, ActionType.LUCKY_RAYOU, null);
+            state.getBalance().getAndAdd(DAILY_REWARD);
+            state.getDailyMap().put(today.format(format), ++todayDaily);
+        }
+
+        var prev = today;
+        for(int i = 0; i < 7; i++) {
+            final var claimed = state.getDailyMap().getOrDefault(prev.format(format), 0);
+
+            if(claimed == 0 || claimed > 1)
+                return;
+
+            prev = prev.minusDays(1);
+        }
+
+        this.addAction(state, actions, ActionType.WEEKLY, null);
+        state.getBalance().getAndAdd(DAILY_REWARD);
+        state.getDailyMap().put(today.format(format), ++todayDaily);
     }
 
     private void projectFusions(final ActionList actions, final ProjectionState state, final boolean golden) {
@@ -123,20 +181,6 @@ public class ProjectionServiceImpl implements ProjectionService {
             projections.set(p);
         }
 
-        //Prioritize events fusions because it's the only period we can craft their missing inputs.
-        if(!state.getActiveEvents().isEmpty()) {
-            state.getActiveEvents().forEach(e -> projections.get().stream()
-                .filter(p -> p.getFusion().getResult().getPack().getId().equals(e.getPackId()) &&
-                    this.goalFilter(inventory, p)
-                ).sorted(comparator).forEach(p -> {
-                    if(p.getDoability() >= 100)
-                        this.solvedFusion(actions, p, state);
-                    else
-                        this.tryFillMissing(actions, p, state);
-                }));
-        }
-
-        //TODO: allow to redo fusion, only when inputs aren't used by other fusions OR other fusions result is already in inventory (recursive)
         projections.get().stream()
             .filter(p -> this.goalFilter(inventory, p))
             .sorted(comparator).forEach(p -> {
@@ -147,21 +191,11 @@ public class ProjectionServiceImpl implements ProjectionService {
             });
     }
 
-
-    private boolean goalFilter(final Map<String, ItemProjection> inventory, final FusionProjection projection) {
-        final var iProj = Optional.ofNullable(inventory.getOrDefault(projection.getFusion().getResult().getId(), null));
-        final var hasItem = iProj.isPresent() && iProj.get().getQuantity() > 0;
-
-        if(this.projectionGoal.equalsIgnoreCase("collection"))
-            return !projection.isSolved() && !hasItem;
-
-        return true;
-    }
-
-
     private void tryFillMissing(final ActionList actions, final FusionProjection projection, final ProjectionState state) {
         final var cost = new AtomicInteger(0);
         final var craftable = new AtomicInteger(0);
+        final var money = state.getMoneyFor(projection.getFusion().getResult());
+        final var vortexPack = this.memoryCache.getOrDefault(CacheEntry.CURRENT_VORTEX_PACK, "");
 
         projection.getMissingItems().forEach((i, q) -> {
             cost.getAndAdd(state.getConfigFor(i.getRarity(), false).getCraftValue() * q);
@@ -169,23 +203,21 @@ public class ProjectionServiceImpl implements ProjectionService {
             if(projection.isGolden())
                 cost.getAndAdd(state.getConfigFor(i.getRarity(), true).getCraftValue() * q);
 
-            if(i.isCraftable())
+            if(i.isCraftable() && (i.getPack().getId().equals(vortexPack) || i.getPack().getName().equalsIgnoreCase("classique")))
                 craftable.incrementAndGet();
-
-            //TODO: can input be made by another cheaper fusion ?
         });
 
-        if(state.getLoreDust().get() > cost.get() && craftable.get() == projection.getMissingItems().size()) {
+        if(money.get() > cost.get() && craftable.get() == projection.getMissingItems().size()) {
             projection.getMissingItems().forEach((i, q) -> {
                 this.produceItem(state, i, q, projection.isGolden());
 
-                actions.addElement(ActionType.CRAFT, i, q);
+                this.addAction(state, actions, ActionType.CRAFT, i, q);
                 if(projection.isGolden()) {
-                    actions.addElement(ActionType.ENCHANT, i ,q);
+                    this.addAction(state, actions, ActionType.ENCHANT, i, q);
                 }
             });
 
-            state.getLoreDust().set(state.getLoreDust().get() - cost.get());
+            money.getAndAdd(-cost.get());
         }
     }
 
@@ -197,7 +229,11 @@ public class ProjectionServiceImpl implements ProjectionService {
                     throw new ProjectionException("No no no, you have no inventory entry for that item.");
 
                 final var iProj = projection.getSharedInventory().get(input.getItem().getId());
-                if(iProj.getQuantity() < input.getQuantity())
+                final var quantity = this.projectionGoal.equalsIgnoreCase("collection") ?
+                    iProj.getQuantity() - 1 :
+                    iProj.getQuantity();
+
+                if(quantity < input.getQuantity())
                     throw new ProjectionException("Not enough available items.");
 
                 toConsume.put(iProj, input.getQuantity());
@@ -211,13 +247,27 @@ public class ProjectionServiceImpl implements ProjectionService {
 
             state.getScore().getAndAdd(projection.getProfit());
             projection.setSolved(true);
-            actions.addElement(new Action(ActionType.FUSION, projection));
+            this.addAction(state, actions, ActionType.FUSION, projection, 1);
 
             logger.debug("Solved fusion {}", projection.getIdentifier());
         } catch (ProjectionException e) {
             logger.debug("Cannot consume inputs, a previous fusion may already have consumed one of these.");
         }
     }
+
+
+    private void projectSubscription(final ActionList actions, final ProjectionState state) {
+        if(state.getSubscribed().get() || state.getLoreDust().get() < SUBSCRIPTION_COST)
+            return;
+
+        //TODO: rentability check on 2000
+        //TODO: Auto subscription + Keycloak auth negociation
+
+        state.getLoreDust().getAndAdd(-SUBSCRIPTION_COST);
+        this.addAction(state, actions, ActionType.SUBSCRIBE, null);
+        state.getSubscribed().set(true);
+    }
+
 
     private void projectUpgrades(final ActionList actions, final ProjectionState state) {
         final var normalInv = state.getInventory().getNormalInventory();
@@ -229,21 +279,24 @@ public class ProjectionServiceImpl implements ProjectionService {
 
             final var cost = state.getConfigFor(itemProj.getItem().getRarity(), true).getCraftValue();
             final var quantity = goldenInv.containsKey(id) ? goldenInv.get(id).getQuantity() : 0;
+            final var money = state.getMoneyFor(itemProj.getItem());
 
-            if(quantity > 0 || itemProj.getQuantity() < 2 || state.getLoreDust().get() < cost)
+            if(quantity > 0 || itemProj.getQuantity() < 2 || money.get() < cost)
                 return;
 
             try {
                 this.consumeItem(state, itemProj.getItem(), false);
                 this.produceItem(state, itemProj.getItem(), true);
 
-                actions.addElement(new Action(ActionType.ENCHANT, itemProj));
-                state.getLoreDust().set(state.getLoreDust().get() - cost);
+                this.addAction(state, actions, ActionType.ENCHANT, itemProj, 1);
+
+                money.getAndAdd(-cost);
             } catch (ProjectionException e) {
                 logger.error(e.getMessage());
             }
         });
     }
+
 
     private void projectInvocation(final ActionList actions, final ProjectionState state) {
         final var todayInvocations = (Set<String>) this.memoryCache.getOrDefault(CacheEntry.INVOCATIONS, new HashSet<String>());
@@ -255,8 +308,8 @@ public class ProjectionServiceImpl implements ProjectionService {
                     return;
 
                 if(state.getBalance().get() >= e.getBalanceCost()) {
-                    actions.addElement(new Action(ActionType.INVOCATION, e));
-                    state.getBalance().set(state.getBalance().get() - e.getBalanceCost());
+                    this.addAction(state, actions, ActionType.INVOCATION, e);
+                    state.getBalance().getAndAdd(-e.getBalanceCost());
                 }
 
                 todayInvocations.add(e.getIdentifier());
@@ -269,50 +322,56 @@ public class ProjectionServiceImpl implements ProjectionService {
                 return;
         }
 
-        if(state.getBalance().get() >= 1000) {
-            actions.addElement(new Action(ActionType.INVOCATION, null));
-            state.getBalance().set(state.getBalance().get() - 1000);
+        if(state.getBalance().get() >= INVOCATION_COST) {
+            this.addAction(state, actions, ActionType.INVOCATION, null);
+            state.getBalance().getAndAdd(-INVOCATION_COST);
         }
     }
 
+
     private void projectAscension(final ActionList actions, final ProjectionState state) {
-        if(state.getLoreDust().get() >= ASCENSION_COST && state.getAscensionsCount().get() < PER_DAY_ASCENSIONS) {
-            actions.addElement(new Action(ActionType.ASCENSION, null));
-            state.getLoreDust().set(state.getLoreDust().get() - ASCENSION_COST);
-            state.getAscensionsCount().getAndIncrement();
-        }
+        if(state.getLoreDust().get() < ASCENSION_COST || state.getAscensionsCount().get() > PER_DAY_ASCENSIONS)
+            return;
+
+        final var vortexStats = state.getVortexStats();
+
+        if(vortexStats.getItemCount() >= vortexStats.getMaxCount())
+            return;
+
+        this.addAction(state, actions, ActionType.ASCENSION, null);
+        state.getLoreDust().getAndAdd(-ASCENSION_COST);
+        state.getAscensionsCount().getAndIncrement();
     }
+
+
+    private void projectChallenges(final ActionList actions, final ProjectionState state) {
+
+
+        state.getChallenges();
+    }
+
 
     private void projectCraft(final ActionList actions, final ProjectionState state) {
         final var inventory = state.getInventory().getNormalInventory();
-        final var events = state.getActiveEvents().stream()
-            .map(Event::getPackId)
-            .collect(Collectors.toSet());
-
-        if(!events.isEmpty()) {
-            state.getAllItems().stream()
-                .filter(i -> events.contains(i.getPack().getId()))
-                .forEach(i -> this.tryCraft(actions, i, inventory, state));
-        }
-
-        state.getAllItems().stream()
-            .filter(Predicate.not(i -> events.contains(i.getPack().getId())))
-            .forEach(i -> this.tryCraft(actions, i, inventory, state));
+        state.getAllItems().forEach(i -> this.tryCraft(actions, i, inventory, state));
     }
 
     private void tryCraft(final ActionList actions, final Item i, final Map<String, ItemProjection> inventory, final ProjectionState state) {
-        if(!i.isCraftable())
+        final var vortexPack = this.memoryCache.getOrDefault(CacheEntry.CURRENT_VORTEX_PACK, "");
+
+        if(!i.isCraftable() || (!i.getPack().getId().equals(vortexPack) && !i.getPack().getName().equalsIgnoreCase("classique")))
             return;
 
         final var ownedQuantity = inventory.containsKey(i.getId()) ? inventory.get(i.getId()).getQuantity() : 0;
         final var cost = state.getConfigFor(i.getRarity(), false).getCraftValue();
+        final var money = state.getMoneyFor(i);
 
-        if(ownedQuantity > 0 || state.getLoreDust().get() < cost)
+        if(ownedQuantity > 0 || money.get() < cost)
             return;
 
         this.produceItem(state, i, false);
-        state.getLoreDust().set(state.getLoreDust().get() - cost);
-        actions.addElement(new Action(ActionType.CRAFT, i));
+        money.getAndAdd(-cost);
+        this.addAction(state, actions, ActionType.CRAFT, i);
     }
 
 
@@ -334,11 +393,12 @@ public class ProjectionServiceImpl implements ProjectionService {
             if(count <= 0)
                 return;
 
+            final var money = state.getMoneyFor(iProj.getItem());
             final var recycleValue = state.getConfigFor(iProj.getItem().getRarity(), golden).getRecycleValue();
 
             try {
                 this.consumeItem(state, iProj.getItem(), count, golden);
-                state.getLoreDust().getAndAdd(recycleValue * count);
+                money.getAndAdd(recycleValue * count);
                 toRecycle.add(new RecycleElement(iProj.getItem(), golden), count);
             } catch (ProjectionException e) {
                 logger.error(e.getMessage());
@@ -346,9 +406,24 @@ public class ProjectionServiceImpl implements ProjectionService {
         });
 
         if(!toRecycle.isEmpty())
-            actions.addElement(new Action(ActionType.RECYCLE, toRecycle));
+            this.addAction(state, actions, ActionType.RECYCLE, toRecycle, 1);
     }
 
+
+    private void addAction(final ProjectionState state,
+                           final ActionList actions,
+                           final ActionType type,
+                           final ActionElement element) {
+        this.addAction(state, actions, type, element, 1);
+    }
+    private void addAction(final ProjectionState state,
+                           final ActionList actions,
+                           final ActionType type,
+                           final ActionElement element,
+                           final int count) {
+        actions.addElement(type, element, count);
+        this.progressChallenges(state, type, this.getProgress(state, type, element, count));
+    }
 
     private void consumeItem(final ProjectionState state, final Item item, final boolean golden) throws ProjectionException {
         this.consumeItem(state, item, 1, golden);
@@ -366,17 +441,18 @@ public class ProjectionServiceImpl implements ProjectionService {
             throw new ProjectionException("Not enough quantity to consume.");
 
         projection.consume(quantity);
-        state.getScore().set(state.getScore().get() - ((golden ? item.getScoreGolden() : item.getScore()) * quantity));
+        state.getScore().getAndAdd(-((golden ? item.getScoreGolden() : item.getScore()) * quantity));
 
         if (projection.getQuantity() == 0)
-            state.getScore().set(state.getScore().get() - UNICITY_BONUS);
+            state.getScore().getAndAdd(-UNICITY_BONUS);
     }
 
     private void produceItem(final ProjectionState state, final Item item, final boolean golden) {
         this.produceItem(state, item, 1, golden);
     }
     private void produceItem(final ProjectionState state, final Item item, final int quantity, final boolean golden) {
-        final var inventory = golden ? state.getInventory().getGoldenInventory() :
+        final var inventory = golden ?
+            state.getInventory().getGoldenInventory() :
             state.getInventory().getNormalInventory();
         final var projection = inventory.getOrDefault(item.getId(), new ItemProjection(item, 0));
         final var wasEmpty = projection.getQuantity() == 0;
@@ -390,17 +466,74 @@ public class ProjectionServiceImpl implements ProjectionService {
             state.getScore().getAndAdd(UNICITY_BONUS);
     }
 
+    private void progressChallenges(final ProjectionState state, final ActionType type, final int quantity) {
+        if(state.getChallenges().isEmpty())
+            return;
 
-    private ProjectionSummary makeSummary(final ActionList actions, final User user, final ProjectionState state) {
+        state.getChallenges().stream()
+            .filter(c -> c.getType().getActionType().isPresent() && c.getType().getActionType().get().equals(type))
+            .filter(c -> c.getProgress().getCurrent() < c.getProgress().getMax())
+            .forEach(c -> {
+                final var progress = c.getProgress();
+                progress.setCurrent(progress.getCurrent() + quantity);
+
+                if(progress.getCurrent() >= progress.getMax()) {
+                    state.getLoreDust().getAndAdd(c.getRewardLoreDust());
+                    state.getScore().getAndAdd(c.getScore());
+                }
+            });
+    }
+    private int getProgress(final ProjectionState state,
+                            final ActionType type,
+                            final ActionElement element,
+                            final int count) {
+        switch(type) {
+            case RECYCLE:
+                return ((ActionElementList) element).stream()
+                    .map(RecycleElement.class::cast)
+                    .filter(e -> e.getItem().getPack().getName().equalsIgnoreCase("classique"))
+                    .map(e -> state.getConfigFor(e.getItem().getRarity(), e.isGolden()).getRecycleValue())
+                    .reduce(0, Integer::sum);
+            case INVOCATION:
+                return 10;
+            default:
+                return count;
+        }
+    }
+
+
+    private ProjectionSummary makeSummary(final ActionList actions,
+                                          final User user,
+                                          final ProjectionState state,
+                                          final String discordTag) throws IOException, InterruptedException {
         final var summary = new ProjectionSummary(actions);
         final var oldInventory = new InventoryProjection(user);
         final var newInventory = state.getInventory();
+        final var initChallenges = this.userService.fetchUserChallenges(discordTag).stream()
+            .filter(c -> c.getType().getActionType().isPresent())
+            .filter(c -> c.getProgress().getCurrent() < c.getProgress().getMax())
+            .collect(Collectors.toSet());
+        final var stateChallenges = state.getChallenges().stream()
+            .collect(Collectors.toMap(Challenge::getId, Function.identity()));
 
-        summary.put("Poussière de lore", new Change(user.getLoreDust(), state.getLoreDust().get()));
+        summary.put("Poudre créatrice", new Change(user.getLoreDust(), state.getLoreDust().get()));
+        summary.put("Cristaux d'histoire", new Change(user.getLoreFragment(), state.getLoreFragment().get()));
         summary.put("Score", new Change(user.getScore(), state.getScore().get()));
         summary.put("Cartes normales", new Change(oldInventory.getNormalCount(), newInventory.getNormalCount()));
         summary.put("Cartes dorées", new Change(oldInventory.getGoldenCount(), newInventory.getGoldenCount()));
         summary.put("Z Monnaie", new Change(user.getBalance(), state.getBalance().get()));
+
+        initChallenges.forEach(c -> {
+            final var stateChall = stateChallenges.get(c.getId());
+
+            summary.put(
+                String.format("Challenge \"%s\"", c.getDescription()),
+                new Change(
+                    String.format("%s/%s", c.getProgress().getCurrent(), c.getProgress().getMax()),
+                    String.format("%s/%s", stateChall.getProgress().getCurrent(), stateChall.getProgress().getMax())
+                )
+            );
+        });
 
         return summary;
     }

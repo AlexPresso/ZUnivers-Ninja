@@ -14,6 +14,7 @@ public class User extends BaseGraphObject {
     private String discordUserName;
     private int position;
     private int loreDust;
+    private int loreFragment;
     private int score;
     private int balance;
     @Relationship(type = "USER_STATISTICS", direction = Relationship.Direction.OUTGOING)
@@ -51,6 +52,14 @@ public class User extends BaseGraphObject {
     }
     public User setLoreDust(int loreDust) {
         this.loreDust = loreDust;
+        return this;
+    }
+
+    public int getLoreFragment() {
+        return loreFragment;
+    }
+    public User setLoreFragment(int loreFragment) {
+        this.loreFragment = loreFragment;
         return this;
     }
 
