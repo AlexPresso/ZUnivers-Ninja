@@ -491,6 +491,7 @@ public class ProjectionServiceImpl implements ProjectionService {
             case RECYCLE:
                 return ((ActionElementList) element).stream()
                     .map(RecycleElement.class::cast)
+                    .filter(e -> e.getItem().getPack().getName().equalsIgnoreCase("classique"))
                     .map(e -> state.getConfigFor(e.getItem().getRarity(), e.isGolden()).getRecycleValue())
                     .reduce(0, Integer::sum);
             case INVOCATION:
