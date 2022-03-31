@@ -47,6 +47,7 @@ public class ProjectionServiceImpl implements ProjectionService {
     private final MemoryCache memoryCache;
 
     private final static int ASCENSION_COST = 20;
+    private final static int VORTEX_MAX = 6;
     private final static int INVOCATION_COST = 1000;
     private final static int PER_DAY_ASCENSIONS = 2;
     private final static int UNICITY_BONUS = 6;
@@ -335,7 +336,7 @@ public class ProjectionServiceImpl implements ProjectionService {
 
         final var vortexStats = state.getVortexStats();
 
-        if(vortexStats.getItemCount() >= vortexStats.getMaxCount())
+        if(vortexStats.getItemCount() >= VORTEX_MAX)
             return;
 
         this.addAction(state, actions, ActionType.ASCENSION, null);
