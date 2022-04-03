@@ -5,7 +5,8 @@ spring.neo4j:
     password: password
 
 toolkit:
-  discordTag: Alex'Presso#5480
+  discordTags:
+    - Alex'Presso#5480
   runAutomatedTasks: true
 
 zunivers:

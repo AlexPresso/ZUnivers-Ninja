@@ -13,6 +13,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Component
@@ -26,8 +27,8 @@ public class TaskManager {
     private final AdviceService adviceService;
     private final TaskExecutorService taskExecutorService;
 
-    @Value(value = "${toolkit.discordTag}")
-    private String discordTag;
+    @Value(value = "${toolkit.discordTags}")
+    private String[] discordTags;
     @Value(value = "${toolkit.runAutomatedTasks}")
     private boolean runAutomatedTasks;
 
@@ -55,13 +56,15 @@ public class TaskManager {
 
         logger.info("Done updating lore.");
 
-        this.userService.updateUserAndInventory(this.discordTag);
-        final var summary = this.adviceService.adviseUser(this.discordTag);
+        for(final var tag : this.discordTags) {
+            this.userService.updateUserAndInventory(tag);
+            final var summary = this.adviceService.adviseUser(tag);
 
-        if(this.runAutomatedTasks)
-            this.taskExecutorService.runTasks(summary.getActions().stream()
-                .filter(a -> a.getRunnable().isPresent())
-                .collect(Collectors.toSet())
-            );
+            if(this.runAutomatedTasks)
+                this.taskExecutorService.runTasks(summary.getActions().stream()
+                        .filter(a -> a.getRunnable().isPresent())
+                        .collect(Collectors.toSet())
+                );
+        }
     }
 }
