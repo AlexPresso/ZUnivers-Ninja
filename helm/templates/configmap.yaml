@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: zu-ninja-config
+data:
+  toolkit: |
+    discordTags: {{ .Values.discordTags }}
+    runAutomatedTasks: {{ .Values.runAutomatedTasks }}
+  webhookUrl: {{ .Values.webhookUrl }}
+  goal: {{ .Values.goal }}
+
+  zunivers: |
+    apiBaseUrl: zunivers-api.zerator.com
+    frontBaseUrl: zunivers.zerator.com
+
+  logging.level.me.alexpresso.zuninja: INFO

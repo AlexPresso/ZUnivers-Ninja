@@ -1,0 +1,11 @@
+apiVersion: v2
+name: zunivers-ninja
+description: Advise tool for the zuniver's card game
+type: application
+icon: https://zunivers.zerator.com/img/logo.ac4a9e45.png
+version: 1.0.8
+appVersion: 1.5.4
+dependencies:
+  - name: neo4j
+    version: 4.4.5
+    repository: https://neo4j-contrib.github.io/neo4j-helm/
