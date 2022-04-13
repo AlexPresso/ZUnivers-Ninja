@@ -1,6 +1,6 @@
 apiVersion: v2
 name: zunivers-ninja
-description: Advise tool for the zuniver's card game
+description: Advice tool for the zunivers card game
 type: application
 icon: https://zunivers.zerator.com/img/logo.ac4a9e45.png
 version: 1.0.8
