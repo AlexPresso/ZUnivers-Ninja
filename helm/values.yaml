@@ -4,4 +4,3 @@ githubToken: abcd
 webhookUrl:
 discordTags: []
 runAutomatedTasks: false
-goal: collection

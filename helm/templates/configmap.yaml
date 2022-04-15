@@ -7,7 +7,6 @@ data:
     discordTags: {{ .Values.discordTags }}
     runAutomatedTasks: {{ .Values.runAutomatedTasks }}
   webhookUrl: {{ .Values.webhookUrl }}
-  goal: {{ .Values.goal }}
 
   zunivers: |
     apiBaseUrl: zunivers-api.zerator.com

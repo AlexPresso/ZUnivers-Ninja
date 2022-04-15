@@ -6,7 +6,7 @@
 
     <groupId>me.alexpresso</groupId>
     <artifactId>zunivers-ninja</artifactId>
-    <version>1.5.4</version>
+    <version>1.5.5</version>
 
     <properties>
         <maven.compiler.source>11</maven.compiler.source>
