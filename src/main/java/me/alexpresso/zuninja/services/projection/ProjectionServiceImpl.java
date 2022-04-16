@@ -4,7 +4,10 @@ import me.alexpresso.zuninja.classes.cache.CacheEntry;
 import me.alexpresso.zuninja.classes.cache.MemoryCache;
 import me.alexpresso.zuninja.classes.challenge.Challenge;
 import me.alexpresso.zuninja.classes.projection.*;
-import me.alexpresso.zuninja.classes.projection.action.*;
+import me.alexpresso.zuninja.classes.projection.action.ActionElement;
+import me.alexpresso.zuninja.classes.projection.action.ActionElementList;
+import me.alexpresso.zuninja.classes.projection.action.ActionList;
+import me.alexpresso.zuninja.classes.projection.action.ActionType;
 import me.alexpresso.zuninja.classes.projection.recycle.RecycleElement;
 import me.alexpresso.zuninja.classes.projection.summary.Change;
 import me.alexpresso.zuninja.domain.nodes.item.Item;
@@ -20,7 +23,6 @@ import me.alexpresso.zuninja.services.user.UserService;
 import me.alexpresso.zuninja.services.vortex.VortexService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -264,12 +266,11 @@ public class ProjectionServiceImpl implements ProjectionService {
     private void projectUpgrades(final ActionList actions, final ProjectionState state) {
         final var normalInv = state.getInventory().getNormalInventory();
         final var goldenInv = state.getInventory().getGoldenInventory();
-        final var vortexPack = this.memoryCache.getOrDefault(CacheEntry.CURRENT_VORTEX_PACK, "");
 
         normalInv.forEach((id, itemProj) -> {
             final var item = itemProj.getItem();
 
-            if(!item.isUpgradable() || !item.getPack().getId().equalsIgnoreCase(vortexPack.toString()))
+            if(!item.isUpgradable() || !this.isInCurrentVortexPack(item))
                 return;
 
             final var cost = state.getConfigFor(item.getRarity(), true).getCraftValue();
@@ -352,9 +353,7 @@ public class ProjectionServiceImpl implements ProjectionService {
     }
 
     private void tryCraft(final ActionList actions, final Item i, final Map<String, ItemProjection> inventory, final ProjectionState state) {
-        final var vortexPack = this.memoryCache.getOrDefault(CacheEntry.CURRENT_VORTEX_PACK, "");
-
-        if(!i.isCraftable() || (!i.getPack().getId().equals(vortexPack) && !i.getPack().getName().equalsIgnoreCase("classique")))
+        if(!i.isCraftable() || !this.isInCurrentVortexPack(i))
             return;
 
         final var ownedQuantity = inventory.containsKey(i.getId()) ? inventory.get(i.getId()).getQuantity() : 0;
@@ -497,6 +496,11 @@ public class ProjectionServiceImpl implements ProjectionService {
         }
     }
 
+
+    private boolean isInCurrentVortexPack(final Item item) {
+        return item.getPack().getName().equalsIgnoreCase("classique") ||
+            this.memoryCache.getOrDefault(CacheEntry.CURRENT_VORTEX_PACK, "").equals(item.getPack().getId());
+    }
 
     private ProjectionSummary makeSummary(final ActionList actions,
                                           final User user,
