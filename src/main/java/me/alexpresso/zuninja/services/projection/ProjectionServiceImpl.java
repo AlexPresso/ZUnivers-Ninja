@@ -10,6 +10,7 @@ import me.alexpresso.zuninja.classes.projection.action.ActionList;
 import me.alexpresso.zuninja.classes.projection.action.ActionType;
 import me.alexpresso.zuninja.classes.projection.recycle.RecycleElement;
 import me.alexpresso.zuninja.classes.projection.summary.Change;
+import me.alexpresso.zuninja.classes.vortex.VortexStats;
 import me.alexpresso.zuninja.domain.nodes.item.Item;
 import me.alexpresso.zuninja.domain.nodes.user.User;
 import me.alexpresso.zuninja.domain.relations.InputToFusion;
@@ -26,6 +27,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -34,6 +36,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+
+import static java.time.temporal.ChronoUnit.DAYS;
 
 @Service
 public class ProjectionServiceImpl implements ProjectionService {
@@ -84,7 +88,7 @@ public class ProjectionServiceImpl implements ProjectionService {
         final var allItems = this.itemRepository.findAll();
         final var config = this.configService.fetchConfiguration();
         final var dailyMap = this.userService.fetchLootActivity(discordTag);
-        final var vortexStats = this.vortexService.fetchUserVortexStats(discordTag);
+        final var vortexStats = this.vortexService.getUserCurrentVortexStats(discordTag);
         final var lastAdvice = (LocalDate) this.memoryCache.getOrDefault(CacheEntry.LAST_ADVICE_DATE, LocalDate.now().minusDays(1));
         final var challenges = this.userService.fetchUserChallenges(discordTag).stream()
             .filter(c -> c.getType().getActionType().isPresent())
@@ -326,12 +330,12 @@ public class ProjectionServiceImpl implements ProjectionService {
 
 
     private void projectAscension(final ActionList actions, final ProjectionState state) {
-        if(state.getLoreDust().get() < ASCENSION_COST || state.getAscensionsCount().get() > PER_DAY_ASCENSIONS)
-            return;
+        final var stats = state.getVortexStats();
+        final var totalAchievable = stats
+            .map(s -> (DAYS.between(s.getBeginDate(), LocalDate.now()) + 1) + PER_DAY_ASCENSIONS)
+            .orElse((long) PER_DAY_ASCENSIONS);
 
-        final var vortexStats = state.getVortexStats();
-
-        if(vortexStats.getItemCount() >= VORTEX_MAX)
+        if(state.getLoreDust().get() < ASCENSION_COST || state.getAscensionsCount().get() >= VORTEX_MAX || state.getAscensionsCount().get() >= totalAchievable)
             return;
 
         this.addAction(state, actions, ActionType.ASCENSION, null);

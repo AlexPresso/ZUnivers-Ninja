@@ -44,8 +44,8 @@ public class ProjectionState {
         this.loreFragment = new AtomicInteger(user.getLoreFragment());
         this.balance = new AtomicInteger(user.getBalance());
         this.score = new AtomicInteger(user.getScore());
-        this.ascensionsCount = ascensionsCount;
         this.vortexStats = vortexStats;
+        this.ascensionsCount = new AtomicInteger(vortexStats != null ? vortexStats.getLogCount() : 0);
         this.normalFusions = new AtomicReference<>(null);
         this.goldenFusions = new AtomicReference<>(null);
         this.activeEvents = activeEvents;
@@ -77,8 +77,8 @@ public class ProjectionState {
         return this.score;
     }
 
-    public VortexStats getVortexStats() {
-        return this.vortexStats;
+    public Optional<VortexStats> getVortexStats() {
+        return Optional.ofNullable(this.vortexStats);
     }
 
     public AtomicInteger getAscensionsCount() {
