@@ -1,4 +1,6 @@
-# ZUnivers-Ninja
+<div align="center">
+<img src="https://repository-images.githubusercontent.com/420819440/51db7016-b325-4d1b-a1d3-ce82d771f58b" height="320px">
+</div>
 
 This project aims to suggest one (or more) users, the best actions scenario to take, while never losing points on the ZUnivers card game.
 It's currently based on a recursive method which always try projections until it cannot do anything more than the previous iteration. 
