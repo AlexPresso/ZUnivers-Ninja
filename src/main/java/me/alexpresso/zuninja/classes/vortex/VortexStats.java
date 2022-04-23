@@ -7,7 +7,12 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.datatype.jsr310.deser.LocalDateDeserializer;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateSerializer;
 
+import java.time.Duration;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+
+import static java.time.temporal.ChronoUnit.DAYS;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class VortexStats {
@@ -34,5 +39,10 @@ public class VortexStats {
 
     public LocalDate getEndDate() {
         return this.endDate;
+    }
+
+    public Long getTotalAchievable(final LocalDateTime now) {
+        final var beginNoon = LocalDateTime.of(this.beginDate, LocalTime.NOON);
+        return Duration.between(beginNoon, now).toDays();
     }
 }

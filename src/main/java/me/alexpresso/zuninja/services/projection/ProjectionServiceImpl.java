@@ -330,9 +330,10 @@ public class ProjectionServiceImpl implements ProjectionService {
 
 
     private void projectAscension(final ActionList actions, final ProjectionState state) {
+        final var now = LocalDateTime.now();
         final var stats = state.getVortexStats();
         final var totalAchievable = stats
-            .map(s -> (DAYS.between(s.getBeginDate(), LocalDate.now()) + 1) * PER_DAY_ASCENSIONS)
+            .map(s -> (s.getTotalAchievable(now) + 1) * PER_DAY_ASCENSIONS)
             .orElse((long) PER_DAY_ASCENSIONS);
 
         if(state.getLoreDust().get() < ASCENSION_COST || state.getAscensionsCount().get() >= VORTEX_MAX || state.getAscensionsCount().get() >= totalAchievable)
