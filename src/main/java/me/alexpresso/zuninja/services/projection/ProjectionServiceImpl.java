@@ -52,7 +52,7 @@ public class ProjectionServiceImpl implements ProjectionService {
     private final static int VORTEX_MAX = 6;
     private final static int INVOCATION_COST = 1000;
     private final static int PER_DAY_ASCENSIONS = 2;
-    private final static int UNICITY_BONUS = 6;
+    private final static int UNICITY_BONUS = 10;
     private final static int SUBSCRIPTION_COST = 4000;
     private final static int DAILY_REWARD = 1200;
 
@@ -424,7 +424,8 @@ public class ProjectionServiceImpl implements ProjectionService {
         this.consumeItem(state, item, 1, golden);
     }
     private void consumeItem(final ProjectionState state, final Item item, final int quantity, final boolean golden) throws ProjectionException {
-        final var inventory = golden ? state.getInventory().getGoldenInventory() :
+        final var inventory = golden ?
+            state.getInventory().getGoldenInventory() :
             state.getInventory().getNormalInventory();
 
         if(!inventory.containsKey(item.getId()))
