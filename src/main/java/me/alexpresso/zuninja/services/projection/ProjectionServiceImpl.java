@@ -4,9 +4,13 @@ import me.alexpresso.zuninja.classes.cache.CacheEntry;
 import me.alexpresso.zuninja.classes.cache.MemoryCache;
 import me.alexpresso.zuninja.classes.challenge.Challenge;
 import me.alexpresso.zuninja.classes.projection.*;
-import me.alexpresso.zuninja.classes.projection.action.*;
+import me.alexpresso.zuninja.classes.projection.action.ActionElement;
+import me.alexpresso.zuninja.classes.projection.action.ActionElementList;
+import me.alexpresso.zuninja.classes.projection.action.ActionList;
+import me.alexpresso.zuninja.classes.projection.action.ActionType;
 import me.alexpresso.zuninja.classes.projection.recycle.RecycleElement;
 import me.alexpresso.zuninja.classes.projection.summary.Change;
+import me.alexpresso.zuninja.classes.vortex.VortexStats;
 import me.alexpresso.zuninja.domain.nodes.item.Item;
 import me.alexpresso.zuninja.domain.nodes.user.User;
 import me.alexpresso.zuninja.domain.relations.InputToFusion;
@@ -20,10 +24,10 @@ import me.alexpresso.zuninja.services.user.UserService;
 import me.alexpresso.zuninja.services.vortex.VortexService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -32,6 +36,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+
+import static java.time.temporal.ChronoUnit.DAYS;
 
 @Service
 public class ProjectionServiceImpl implements ProjectionService {
@@ -50,12 +56,9 @@ public class ProjectionServiceImpl implements ProjectionService {
     private final static int VORTEX_MAX = 6;
     private final static int INVOCATION_COST = 1000;
     private final static int PER_DAY_ASCENSIONS = 2;
-    private final static int UNICITY_BONUS = 6;
+    private final static int UNICITY_BONUS = 10;
     private final static int SUBSCRIPTION_COST = 4000;
     private final static int DAILY_REWARD = 1200;
-
-    @Value(value = "${goal:score}")
-    private String projectionGoal;
 
 
     public ProjectionServiceImpl(final FusionRepository fr,
@@ -85,7 +88,7 @@ public class ProjectionServiceImpl implements ProjectionService {
         final var allItems = this.itemRepository.findAll();
         final var config = this.configService.fetchConfiguration();
         final var dailyMap = this.userService.fetchLootActivity(discordTag);
-        final var vortexStats = this.vortexService.fetchUserVortexStats(discordTag);
+        final var vortexStats = this.vortexService.getUserCurrentVortexStats(discordTag);
         final var lastAdvice = (LocalDate) this.memoryCache.getOrDefault(CacheEntry.LAST_ADVICE_DATE, LocalDate.now().minusDays(1));
         final var challenges = this.userService.fetchUserChallenges(discordTag).stream()
             .filter(c -> c.getType().getActionType().isPresent())
@@ -127,14 +130,10 @@ public class ProjectionServiceImpl implements ProjectionService {
     }
 
     private boolean goalFilter(final Map<String, ItemProjection> inventory, final FusionProjection projection) {
-        if(this.projectionGoal.equalsIgnoreCase("collection")) {
-            final var iProj = Optional.ofNullable(inventory.getOrDefault(projection.getFusion().getResult().getId(), null));
-            final var hasItem = iProj.isPresent() && iProj.get().getQuantity() > 0;
+        final var iProj = Optional.ofNullable(inventory.getOrDefault(projection.getFusion().getResult().getId(), null));
+        final var hasItem = iProj.isPresent() && iProj.get().getQuantity() > 0;
 
-            return !projection.isSolved() && !hasItem;
-        }
-
-        return true;
+        return !projection.isSolved() && !hasItem;
     }
 
 
@@ -171,9 +170,6 @@ public class ProjectionServiceImpl implements ProjectionService {
     private void projectFusions(final ActionList actions, final ProjectionState state, final boolean golden) {
         final var projections = golden ? state.getGoldenFusions() : state.getNormalFusions();
         final var inventory = golden ? state.getInventory().getGoldenInventory() : state.getInventory().getNormalInventory();
-        final var comparator = this.projectionGoal.equalsIgnoreCase("collection") ?
-            Comparator.comparingDouble(FusionProjection::getDoability).reversed() :
-            Comparator.comparingDouble(FusionProjection::getProfit).reversed();
 
         if(projections.get() == null) {
             final var p =  this.fusionRepository.findAll().stream()
@@ -184,7 +180,8 @@ public class ProjectionServiceImpl implements ProjectionService {
 
         projections.get().stream()
             .filter(p -> this.goalFilter(inventory, p))
-            .sorted(comparator).forEach(p -> {
+            .sorted(Comparator.comparingDouble(FusionProjection::getDoability).reversed())
+            .forEach(p -> {
                 if(p.getDoability() >= 100)
                     this.solvedFusion(actions, p, state);
                 else
@@ -197,6 +194,8 @@ public class ProjectionServiceImpl implements ProjectionService {
         final var craftable = new AtomicInteger(0);
         final var money = state.getMoneyFor(projection.getFusion().getResult());
         final var vortexPack = this.memoryCache.getOrDefault(CacheEntry.CURRENT_VORTEX_PACK, "");
+        final var totalMissing = projection.getMissingItems().values().stream()
+            .reduce(0, Integer::sum);
 
         projection.getMissingItems().forEach((i, q) -> {
             cost.getAndAdd(state.getConfigFor(i.getRarity(), false).getCraftValue() * q);
@@ -208,7 +207,7 @@ public class ProjectionServiceImpl implements ProjectionService {
                 craftable.incrementAndGet();
         });
 
-        if(money.get() > cost.get() && craftable.get() == projection.getMissingItems().size()) {
+        if(money.get() > cost.get() && craftable.get() == totalMissing) {
             projection.getMissingItems().forEach((i, q) -> {
                 this.produceItem(state, i, q, projection.isGolden());
 
@@ -230,9 +229,7 @@ public class ProjectionServiceImpl implements ProjectionService {
                     throw new ProjectionException("No no no, you have no inventory entry for that item.");
 
                 final var iProj = projection.getSharedInventory().get(input.getItem().getId());
-                final var quantity = this.projectionGoal.equalsIgnoreCase("collection") ?
-                    iProj.getQuantity() - 1 :
-                    iProj.getQuantity();
+                final var quantity = iProj.getQuantity() - 1;
 
                 if(quantity < input.getQuantity())
                     throw new ProjectionException("Not enough available items.");
@@ -275,19 +272,21 @@ public class ProjectionServiceImpl implements ProjectionService {
         final var goldenInv = state.getInventory().getGoldenInventory();
 
         normalInv.forEach((id, itemProj) -> {
-            if(!itemProj.getItem().isUpgradable())
+            final var item = itemProj.getItem();
+
+            if(!item.isUpgradable() || !this.isInCurrentVortexPack(item))
                 return;
 
-            final var cost = state.getConfigFor(itemProj.getItem().getRarity(), true).getCraftValue();
+            final var cost = state.getConfigFor(item.getRarity(), true).getCraftValue();
             final var quantity = goldenInv.containsKey(id) ? goldenInv.get(id).getQuantity() : 0;
-            final var money = state.getMoneyFor(itemProj.getItem());
+            final var money = state.getMoneyFor(item);
 
             if(quantity > 0 || itemProj.getQuantity() < 2 || money.get() < cost)
                 return;
 
             try {
-                this.consumeItem(state, itemProj.getItem(), false);
-                this.produceItem(state, itemProj.getItem(), true);
+                this.consumeItem(state, item, false);
+                this.produceItem(state, item, true);
 
                 this.addAction(state, actions, ActionType.ENCHANT, itemProj, 1);
 
@@ -331,12 +330,13 @@ public class ProjectionServiceImpl implements ProjectionService {
 
 
     private void projectAscension(final ActionList actions, final ProjectionState state) {
-        if(state.getLoreDust().get() < ASCENSION_COST || state.getAscensionsCount().get() > PER_DAY_ASCENSIONS)
-            return;
+        final var now = LocalDateTime.now();
+        final var stats = state.getVortexStats();
+        final var totalAchievable = stats
+            .map(s -> (s.getTotalAchievable(now) + 1) * PER_DAY_ASCENSIONS)
+            .orElse((long) PER_DAY_ASCENSIONS);
 
-        final var vortexStats = state.getVortexStats();
-
-        if(vortexStats.getItemCount() >= VORTEX_MAX)
+        if(state.getLoreDust().get() < ASCENSION_COST || state.getAscensionsCount().get() >= VORTEX_MAX || state.getAscensionsCount().get() >= totalAchievable)
             return;
 
         this.addAction(state, actions, ActionType.ASCENSION, null);
@@ -358,9 +358,7 @@ public class ProjectionServiceImpl implements ProjectionService {
     }
 
     private void tryCraft(final ActionList actions, final Item i, final Map<String, ItemProjection> inventory, final ProjectionState state) {
-        final var vortexPack = this.memoryCache.getOrDefault(CacheEntry.CURRENT_VORTEX_PACK, "");
-
-        if(!i.isCraftable() || (!i.getPack().getId().equals(vortexPack) && !i.getPack().getName().equalsIgnoreCase("classique")))
+        if(!i.isCraftable() || !this.isInCurrentVortexPack(i))
             return;
 
         final var ownedQuantity = inventory.containsKey(i.getId()) ? inventory.get(i.getId()).getQuantity() : 0;
@@ -378,7 +376,8 @@ public class ProjectionServiceImpl implements ProjectionService {
 
     private void projectRecycle(final ActionList actions, final ProjectionState state, final boolean golden) {
         final var toRecycle = new ActionElementList();
-        final var inventory = golden ? state.getInventory().getGoldenInventory() :
+        final var inventory = golden ?
+            state.getInventory().getGoldenInventory() :
             state.getInventory().getNormalInventory();
 
         inventory.values().forEach(iProj -> {
@@ -430,7 +429,8 @@ public class ProjectionServiceImpl implements ProjectionService {
         this.consumeItem(state, item, 1, golden);
     }
     private void consumeItem(final ProjectionState state, final Item item, final int quantity, final boolean golden) throws ProjectionException {
-        final var inventory = golden ? state.getInventory().getGoldenInventory() :
+        final var inventory = golden ?
+            state.getInventory().getGoldenInventory() :
             state.getInventory().getNormalInventory();
 
         if(!inventory.containsKey(item.getId()))
@@ -502,6 +502,11 @@ public class ProjectionServiceImpl implements ProjectionService {
         }
     }
 
+
+    private boolean isInCurrentVortexPack(final Item item) {
+        return item.getPack().getName().equalsIgnoreCase("classique") ||
+            this.memoryCache.getOrDefault(CacheEntry.CURRENT_VORTEX_PACK, "").equals(item.getPack().getId());
+    }
 
     private ProjectionSummary makeSummary(final ActionList actions,
                                           final User user,

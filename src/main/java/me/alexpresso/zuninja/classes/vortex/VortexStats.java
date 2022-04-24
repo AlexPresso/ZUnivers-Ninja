@@ -2,35 +2,45 @@ package me.alexpresso.zuninja.classes.vortex;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.datatype.jsr310.deser.LocalDateDeserializer;
+import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateSerializer;
 
-import java.util.List;
-import java.util.Map;
+import java.time.Duration;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class VortexStats {
+    @JsonProperty("towerLogCount")
+    private int logCount;
 
-    private int maxCount = 0;
-    private int itemCount = 0;
+    @JsonProperty("towerSeasonBeginDate")
+    @JsonSerialize(using = LocalDateSerializer.class)
+    @JsonDeserialize(using = LocalDateDeserializer.class)
+    private LocalDate beginDate;
 
+    @JsonProperty("towerSeasonEndDate")
+    @JsonSerialize(using = LocalDateSerializer.class)
+    @JsonDeserialize(using = LocalDateDeserializer.class)
+    private LocalDate endDate;
 
-    public int getMaxCount() {
-        return this.maxCount;
+    public int getLogCount() {
+        return this.logCount;
     }
 
-    public int getItemCount() {
-        return this.itemCount;
-    }
-    public VortexStats setItemCount(final int count) {
-        this.itemCount = count;
-        return this;
+    public LocalDate getBeginDate() {
+        return this.beginDate;
     }
 
+    public LocalDate getEndDate() {
+        return this.endDate;
+    }
 
-    @JsonProperty("towerStats")
-    public void unpackVortex(final List<Map<String, Object>> data) {
-        data.stream().findFirst().ifPresent(d -> {
-            d.computeIfPresent("maxFloorIndex", (k, v) -> this.maxCount = Integer.parseInt(v.toString()) + 1);
-            d.computeIfPresent("items", (k, v) -> this.itemCount = ((List<?>) v).size());
-        });
+    public Long getTotalAchievable(final LocalDateTime now) {
+        final var beginNoon = LocalDateTime.of(this.beginDate, LocalTime.NOON);
+        return Duration.between(beginNoon, now).toDays();
     }
 }

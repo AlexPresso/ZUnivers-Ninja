@@ -15,9 +15,6 @@ zunivers:
 
 webhookUrl: #insert your own (facultative)
 
-#Could be: score or collection
-goal: collection
-
 logging:
   level:
     me.alexpresso.zuninja: INFO
