@@ -85,7 +85,6 @@ public class ProjectionServiceImpl implements ProjectionService {
         final var config = this.configService.fetchConfiguration();
         final var dailyMap = this.userService.fetchLootActivity(discordTag);
         final var vortexStats = this.vortexService.getUserCurrentVortexStats(discordTag);
-        final var lastAdvice = (LocalDate) this.memoryCache.getOrDefault(discordTag, CacheEntry.LAST_ADVICE_DATE, LocalDate.now().minusDays(1));
         final var challenges = this.userService.fetchUserChallenges(discordTag).stream()
             .filter(c -> c.getType().getActionType().isPresent())
             .filter(c -> c.getProgress().getCurrent() < c.getProgress().getMax())
@@ -93,15 +92,8 @@ public class ProjectionServiceImpl implements ProjectionService {
 
         this.memoryCache.put(CacheEntry.CURRENT_VORTEX_PACK, this.vortexService.fetchCurrentVortexPack());
 
-        if(lastAdvice.isBefore(LocalDate.now()))
-            this.memoryCache.put(discordTag, CacheEntry.TODAY_ASCENSIONS, new AtomicInteger(0));
-
         final var state = new ProjectionState(discordTag, user, activeEvents, vortexStats, allItems, config, challenges, dailyMap);
-
         this.recursiveProjection(actions, state);
-
-        this.memoryCache.put(discordTag, CacheEntry.LAST_ADVICE_DATE, LocalDate.now())
-            .put(discordTag, CacheEntry.TODAY_ASCENSIONS, state.getAscensionsCount());
 
         return this.makeSummary(actions, user, state, discordTag);
     }
