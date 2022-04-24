@@ -92,12 +92,24 @@ public class ProjectionServiceImpl implements ProjectionService {
 
         this.memoryCache.put(CacheEntry.CURRENT_VORTEX_PACK, this.vortexService.fetchCurrentVortexPack());
 
+        this.tryInitNewDay(discordTag);
+
         final var state = new ProjectionState(discordTag, user, activeEvents, vortexStats, allItems, config, challenges, dailyMap);
         this.recursiveProjection(actions, state);
 
         return this.makeSummary(actions, user, state, discordTag);
     }
 
+    private void tryInitNewDay(final String discordTag) {
+        final var lastAdvice = (LocalDate) this.memoryCache.getOrDefault(CacheEntry.LAST_ADVICE_DATE, LocalDate.now().minusDays(1));
+        final var today = LocalDate.now();
+
+        if(!lastAdvice.isBefore(today))
+            return;
+
+        this.memoryCache.put(discordTag, CacheEntry.INVOCATIONS, new HashSet<>());
+        this.memoryCache.put(CacheEntry.LAST_ADVICE_DATE, today);
+    }
 
     private void recursiveProjection(final ActionList actions, final ProjectionState state) {
         this.projectDaily(actions, state);
