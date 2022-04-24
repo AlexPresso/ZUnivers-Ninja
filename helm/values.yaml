@@ -1,6 +1,0 @@
-version: 1.5.4
-githubToken: abcd
-
-webhookUrl:
-discordTags: []
-runAutomatedTasks: false

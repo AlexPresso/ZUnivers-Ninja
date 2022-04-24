@@ -12,8 +12,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 
-import static java.time.temporal.ChronoUnit.DAYS;
-
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class VortexStats {
     @JsonProperty("towerLogCount")
