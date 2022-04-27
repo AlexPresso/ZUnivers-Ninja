@@ -10,7 +10,6 @@ import me.alexpresso.zuninja.classes.projection.action.ActionList;
 import me.alexpresso.zuninja.classes.projection.action.ActionType;
 import me.alexpresso.zuninja.classes.projection.recycle.RecycleElement;
 import me.alexpresso.zuninja.classes.projection.summary.Change;
-import me.alexpresso.zuninja.classes.vortex.VortexStats;
 import me.alexpresso.zuninja.domain.nodes.item.Item;
 import me.alexpresso.zuninja.domain.nodes.user.User;
 import me.alexpresso.zuninja.domain.relations.InputToFusion;
@@ -27,7 +26,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
-import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -36,8 +34,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-
-import static java.time.temporal.ChronoUnit.DAYS;
 
 @Service
 public class ProjectionServiceImpl implements ProjectionService {
@@ -89,7 +85,6 @@ public class ProjectionServiceImpl implements ProjectionService {
         final var config = this.configService.fetchConfiguration();
         final var dailyMap = this.userService.fetchLootActivity(discordTag);
         final var vortexStats = this.vortexService.getUserCurrentVortexStats(discordTag);
-        final var lastAdvice = (LocalDate) this.memoryCache.getOrDefault(CacheEntry.LAST_ADVICE_DATE, LocalDate.now().minusDays(1));
         final var challenges = this.userService.fetchUserChallenges(discordTag).stream()
             .filter(c -> c.getType().getActionType().isPresent())
             .filter(c -> c.getProgress().getCurrent() < c.getProgress().getMax())
@@ -97,20 +92,24 @@ public class ProjectionServiceImpl implements ProjectionService {
 
         this.memoryCache.put(CacheEntry.CURRENT_VORTEX_PACK, this.vortexService.fetchCurrentVortexPack());
 
-        if(lastAdvice.isBefore(LocalDate.now()))
-            this.memoryCache.put(CacheEntry.TODAY_ASCENSIONS, new AtomicInteger(0));
+        this.tryInitNewDay(discordTag);
 
-        final var todayAscensions = (AtomicInteger) this.memoryCache.getOrDefault(CacheEntry.TODAY_ASCENSIONS, new AtomicInteger(0));
-        final var state = new ProjectionState(user, activeEvents, vortexStats, todayAscensions,  allItems, config, challenges, dailyMap);
-
+        final var state = new ProjectionState(discordTag, user, activeEvents, vortexStats, allItems, config, challenges, dailyMap);
         this.recursiveProjection(actions, state);
-
-        this.memoryCache.put(CacheEntry.LAST_ADVICE_DATE, LocalDate.now())
-            .put(CacheEntry.TODAY_ASCENSIONS, state.getAscensionsCount());
 
         return this.makeSummary(actions, user, state, discordTag);
     }
 
+    private void tryInitNewDay(final String discordTag) {
+        final var lastAdvice = (LocalDate) this.memoryCache.getOrDefault(CacheEntry.LAST_ADVICE_DATE, LocalDate.now().minusDays(1));
+        final var today = LocalDate.now();
+
+        if(!lastAdvice.isBefore(today))
+            return;
+
+        this.memoryCache.put(discordTag, CacheEntry.INVOCATIONS, new HashSet<>());
+        this.memoryCache.put(CacheEntry.LAST_ADVICE_DATE, today);
+    }
 
     private void recursiveProjection(final ActionList actions, final ProjectionState state) {
         this.projectDaily(actions, state);
@@ -299,7 +298,7 @@ public class ProjectionServiceImpl implements ProjectionService {
 
 
     private void projectInvocation(final ActionList actions, final ProjectionState state) {
-        final var todayInvocations = (Set<String>) this.memoryCache.getOrDefault(CacheEntry.INVOCATIONS, new HashSet<String>());
+        final var todayInvocations = (Set<String>) this.memoryCache.getOrDefault(state.getDiscordTag(), CacheEntry.INVOCATIONS, new HashSet<String>());
         final var hadCost = new AtomicBoolean(false);
 
         if(!state.getActiveEvents().isEmpty()) {
@@ -316,7 +315,7 @@ public class ProjectionServiceImpl implements ProjectionService {
                 hadCost.set(e.getBalanceCost() > 0);
             });
 
-            this.memoryCache.put(CacheEntry.INVOCATIONS, todayInvocations);
+            this.memoryCache.put(state.getDiscordTag(), CacheEntry.INVOCATIONS, todayInvocations);
 
             if(hadCost.get())
                 return;
