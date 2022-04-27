@@ -14,6 +14,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class ProjectionState {
+
+    private final String discordTag;
     private final InventoryProjection inventory;
     private final AtomicInteger loreDust;
     private final AtomicInteger loreFragment;
@@ -31,14 +33,15 @@ public class ProjectionState {
     private final Map<String, Integer> dailyMap;
 
 
-    public ProjectionState(final User user,
+    public ProjectionState(final String discordTag,
+                           final User user,
                            final Set<Event> activeEvents,
                            final VortexStats vortexStats,
-                           final AtomicInteger ascensionsCount,
                            final List<Item> allItems,
                            final Config config,
                            final Set<Challenge> challenges,
                            final Map<String, Integer> dailyMap) {
+        this.discordTag = discordTag;
         this.inventory = new InventoryProjection(user);
         this.loreDust = new AtomicInteger(user.getLoreDust());
         this.loreFragment = new AtomicInteger(user.getLoreFragment());
@@ -56,6 +59,9 @@ public class ProjectionState {
         this.dailyMap = dailyMap;
     }
 
+    public String getDiscordTag() {
+        return this.discordTag;
+    }
 
     public InventoryProjection getInventory() {
         return this.inventory;
