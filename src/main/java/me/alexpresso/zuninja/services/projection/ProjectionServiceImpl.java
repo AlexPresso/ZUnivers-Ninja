@@ -10,6 +10,7 @@ import me.alexpresso.zuninja.classes.projection.action.ActionList;
 import me.alexpresso.zuninja.classes.projection.action.ActionType;
 import me.alexpresso.zuninja.classes.projection.recycle.RecycleElement;
 import me.alexpresso.zuninja.classes.projection.summary.Change;
+import me.alexpresso.zuninja.classes.vortex.VortexStats;
 import me.alexpresso.zuninja.domain.nodes.item.Item;
 import me.alexpresso.zuninja.domain.nodes.user.User;
 import me.alexpresso.zuninja.domain.relations.InputToFusion;
@@ -331,11 +332,12 @@ public class ProjectionServiceImpl implements ProjectionService {
     private void projectAscension(final ActionList actions, final ProjectionState state) {
         final var now = LocalDateTime.now();
         final var stats = state.getVortexStats();
+        final var floor = stats.map(VortexStats::getFloor).orElse(1);
         final var totalAchievable = stats
             .map(s -> (s.getTotalAchievable(now) + 1) * PER_DAY_ASCENSIONS)
             .orElse((long) PER_DAY_ASCENSIONS);
 
-        if(state.getLoreDust().get() < ASCENSION_COST || state.getAscensionsCount().get() >= VORTEX_MAX || state.getAscensionsCount().get() >= totalAchievable)
+        if(state.getLoreDust().get() < ASCENSION_COST || floor >= VORTEX_MAX || state.getAscensionsCount().get() >= totalAchievable)
             return;
 
         this.addAction(state, actions, ActionType.ASCENSION, null);
