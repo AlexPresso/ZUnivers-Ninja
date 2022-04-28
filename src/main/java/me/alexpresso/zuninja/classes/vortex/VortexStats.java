@@ -16,6 +16,8 @@ import java.time.LocalTime;
 public class VortexStats {
     @JsonProperty("towerLogCount")
     private int logCount;
+    @JsonProperty("maxFloorIndex")
+    private int floorIndex;
 
     @JsonProperty("towerSeasonBeginDate")
     @JsonSerialize(using = LocalDateSerializer.class)
@@ -29,6 +31,10 @@ public class VortexStats {
 
     public int getLogCount() {
         return this.logCount;
+    }
+
+    public int getFloor() {
+        return this.floorIndex + 1;
     }
 
     public LocalDate getBeginDate() {
