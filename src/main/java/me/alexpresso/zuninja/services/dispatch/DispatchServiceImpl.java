@@ -69,10 +69,10 @@ public class DispatchServiceImpl implements DispatchService {
             .map(a -> String.format("!%s %s", a.getType().getCommand(), a.getTarget().map(ActionElement::getIdentifier).orElse("")))
             .collect(Collectors.joining("\n"));
 
-        if(cmds.isEmpty() || this.memoryCache.getOrDefault(CacheEntry.LAST_ADVICE_CMDS, "").equals(cmds))
+        if(cmds.isEmpty() || this.memoryCache.getOrDefault(discordTag, CacheEntry.LAST_ADVICE_CMDS, "").equals(cmds))
             return;
 
-        this.memoryCache.put(CacheEntry.LAST_ADVICE_CMDS, cmds);
+        this.memoryCache.put(discordTag, CacheEntry.LAST_ADVICE_CMDS, cmds);
         final var discordId = this.userRepository.findDiscordIdByTag(discordTag)
             .orElseThrow(() -> new NodeNotFoundException("This user doesn't exist."));
 
