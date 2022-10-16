@@ -12,7 +12,7 @@
         <maven.compiler.source>11</maven.compiler.source>
         <maven.compiler.target>11</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <zuninjaversion>1.6.2</zuninjaversion>
+        <zuninjaversion>1.6.3</zuninjaversion>
         <springversion>2.7.4</springversion>
     </properties>
 
@@ -49,7 +49,7 @@
         <dependency>
             <groupId>club.minnced</groupId>
             <artifactId>discord-webhooks</artifactId>
-            <version>0.8.0</version>
+            <version>0.8.2</version>
         </dependency>
         <dependency>
             <groupId>org.pf4j</groupId>
