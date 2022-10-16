@@ -147,7 +147,6 @@ public class ProjectionServiceImpl implements ProjectionService {
 
         if(todayDaily == 0) {
             this.addAction(state, actions, ActionType.DAILY, null);
-            this.addAction(state, actions, ActionType.LUCKY_RAYOU, null);
             state.getBalance().getAndAdd(DAILY_REWARD);
             state.getDailyMap().put(today.format(format), ++todayDaily);
         }
