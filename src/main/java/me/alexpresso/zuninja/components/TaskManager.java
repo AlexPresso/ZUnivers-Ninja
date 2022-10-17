@@ -13,6 +13,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.security.NoSuchAlgorithmException;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -47,7 +48,7 @@ public class TaskManager {
 
 
     @Scheduled(fixedDelay = 30 * 60 * 1000)
-    public void updateLore() throws IOException, InterruptedException, NodeNotFoundException {
+    public void updateLore() throws IOException, InterruptedException, NodeNotFoundException, NoSuchAlgorithmException {
         logger.info("Updating lore...");
 
         final var items = this.itemService.updateItems();
