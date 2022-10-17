@@ -16,7 +16,11 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -24,14 +28,10 @@ public class DispatchServiceImpl implements DispatchService {
 
     private final static Logger logger = LoggerFactory.getLogger(DispatchServiceImpl.class);
     private final WebhookClient client;
-    private final MemoryCache memoryCache;
     private final UserRepository userRepository;
 
 
-    public DispatchServiceImpl(@Value(value = "${webhookUrl}") final String webhookUrl,
-                               final MemoryCache mc,
-                               final UserRepository ur) {
-        this.memoryCache = mc;
+    public DispatchServiceImpl(@Value(value = "${webhookUrl}") final String webhookUrl, final UserRepository ur) {
         this.userRepository = ur;
 
         if(webhookUrl.isEmpty()) {
@@ -63,16 +63,23 @@ public class DispatchServiceImpl implements DispatchService {
     }
 
     @Override
-    public void dispatch(final ProjectionSummary summary, final String discordTag) throws NodeNotFoundException {
+    public void dispatch(final ProjectionSummary summary, final String discordTag) throws NodeNotFoundException, NoSuchAlgorithmException {
         final var cmds = summary.getActions().stream()
             .filter(a -> a.getRunnable().isEmpty())
             .map(a -> String.format("!%s %s", a.getType().getCommand(), a.getTarget().map(ActionElement::getIdentifier).orElse("")))
             .collect(Collectors.joining("\n"));
 
-        if(cmds.isEmpty() || this.memoryCache.getOrDefault(discordTag, CacheEntry.LAST_ADVICE_CMDS, "").equals(cmds))
+        final var user = this.userRepository.findByDiscordUserName(discordTag)
+            .orElseThrow(() -> new NodeNotFoundException("This user doesn't exist."));
+
+        final var digest = MessageDigest.getInstance("MD5");
+        digest.update(cmds.getBytes(StandardCharsets.UTF_8));
+        final var hash = String.format("%032x", new BigInteger(1, digest.digest()));
+
+        if(cmds.isEmpty() || Optional.ofNullable(user.getLastAdviceMd5()).orElse("").equals(hash))
             return;
 
-        this.memoryCache.put(discordTag, CacheEntry.LAST_ADVICE_CMDS, cmds);
+        user.setLastAdviceMd5(hash);
         final var discordId = this.userRepository.findDiscordIdByTag(discordTag)
             .orElseThrow(() -> new NodeNotFoundException("This user doesn't exist."));
 
@@ -94,5 +101,7 @@ public class DispatchServiceImpl implements DispatchService {
         }
 
         this.dispatch(message.addEmbeds(embed.build()));
+
+        this.userRepository.save(user);
     }
 }

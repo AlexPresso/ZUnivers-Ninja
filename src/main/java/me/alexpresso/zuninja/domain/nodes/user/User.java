@@ -17,6 +17,7 @@ public class User extends BaseGraphObject {
     private int loreFragment;
     private int score;
     private int balance;
+    private String lastAdviceMd5;
     @Relationship(type = "USER_STATISTICS", direction = Relationship.Direction.OUTGOING)
     private UserStatistics statistics;
     @Relationship(type = "INVENTORY_ITEM", direction = Relationship.Direction.OUTGOING)
@@ -76,6 +77,14 @@ public class User extends BaseGraphObject {
     }
     public User setBalance(int balance) {
         this.balance = balance;
+        return this;
+    }
+
+    public String getLastAdviceMd5() {
+        return this.lastAdviceMd5;
+    }
+    public User setLastAdviceMd5(String lastAdviceMd5) {
+        this.lastAdviceMd5 = lastAdviceMd5;
         return this;
     }
 

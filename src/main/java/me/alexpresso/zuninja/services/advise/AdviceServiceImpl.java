@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.security.NoSuchAlgorithmException;
 
 @Service
 public class AdviceServiceImpl implements AdviceService {
@@ -30,7 +31,7 @@ public class AdviceServiceImpl implements AdviceService {
 
 
     @Override
-    public ProjectionSummary adviseUser(final String discordTag) throws NodeNotFoundException, IOException, InterruptedException {
+    public ProjectionSummary adviseUser(final String discordTag) throws NodeNotFoundException, IOException, InterruptedException, NoSuchAlgorithmException {
         logger.info("Preparing to advise {}...", discordTag);
 
         final var summary = this.projectionService.makeProjectionsFor(discordTag);
