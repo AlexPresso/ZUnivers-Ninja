@@ -28,14 +28,10 @@ public class DispatchServiceImpl implements DispatchService {
 
     private final static Logger logger = LoggerFactory.getLogger(DispatchServiceImpl.class);
     private final WebhookClient client;
-    private final MemoryCache memoryCache;
     private final UserRepository userRepository;
 
 
-    public DispatchServiceImpl(@Value(value = "${webhookUrl}") final String webhookUrl,
-                               final MemoryCache mc,
-                               final UserRepository ur) {
-        this.memoryCache = mc;
+    public DispatchServiceImpl(@Value(value = "${webhookUrl}") final String webhookUrl, final UserRepository ur) {
         this.userRepository = ur;
 
         if(webhookUrl.isEmpty()) {
