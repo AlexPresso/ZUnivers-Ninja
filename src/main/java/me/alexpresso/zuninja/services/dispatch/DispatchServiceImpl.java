@@ -5,8 +5,6 @@ import club.minnced.discord.webhook.WebhookClientBuilder;
 import club.minnced.discord.webhook.send.WebhookEmbed;
 import club.minnced.discord.webhook.send.WebhookEmbedBuilder;
 import club.minnced.discord.webhook.send.WebhookMessageBuilder;
-import me.alexpresso.zuninja.classes.cache.CacheEntry;
-import me.alexpresso.zuninja.classes.cache.MemoryCache;
 import me.alexpresso.zuninja.classes.projection.ProjectionSummary;
 import me.alexpresso.zuninja.classes.projection.action.ActionElement;
 import me.alexpresso.zuninja.exceptions.NodeNotFoundException;
@@ -20,6 +18,7 @@ import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Arrays;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -73,7 +72,9 @@ public class DispatchServiceImpl implements DispatchService {
             .orElseThrow(() -> new NodeNotFoundException("This user doesn't exist."));
 
         final var digest = MessageDigest.getInstance("MD5");
-        digest.update(cmds.getBytes(StandardCharsets.UTF_8));
+        final var bytes = cmds.getBytes(StandardCharsets.UTF_8);
+        Arrays.sort(bytes);
+        digest.update(bytes);
         final var hash = String.format("%032x", new BigInteger(1, digest.digest()));
 
         if(cmds.isEmpty() || Optional.ofNullable(user.getLastAdviceMd5()).orElse("").equals(hash))
