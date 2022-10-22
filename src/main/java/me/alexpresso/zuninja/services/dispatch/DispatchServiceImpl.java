@@ -81,8 +81,6 @@ public class DispatchServiceImpl implements DispatchService {
             return;
 
         user.setLastAdviceMd5(hash);
-        final var discordId = this.userRepository.findDiscordIdByTag(discordTag)
-            .orElseThrow(() -> new NodeNotFoundException("This user doesn't exist."));
 
         final var sb = new StringBuilder();
         summary.getChanges().entrySet().stream()
@@ -90,7 +88,7 @@ public class DispatchServiceImpl implements DispatchService {
             .forEach(e -> sb.append(String.format("%s: `%s` → `%s`\n", e.getKey(), e.getValue().getBefore(), e.getValue().getAfter())));
 
         final var message = new WebhookMessageBuilder()
-            .setContent(String.format("<@%s>", discordId));
+            .setContent(discordTag);
         final var embed = new WebhookEmbedBuilder()
             .setColor(0xff3434)
             .addField(new WebhookEmbed.EmbedField(true, "Infos", sb.toString()));
