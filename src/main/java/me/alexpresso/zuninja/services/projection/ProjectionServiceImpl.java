@@ -179,8 +179,10 @@ public class ProjectionServiceImpl implements ProjectionService {
 
         projections.get().stream()
             .filter(p -> this.goalFilter(inventory, p))
-            .sorted(Comparator.comparingDouble(FusionProjection::getDoability).reversed())
-            .forEach(p -> {
+            .sorted(Comparator.comparingDouble(FusionProjection::getDoability)
+                .thenComparing(f -> f.getFusion().getResult().getItemIdentifier())
+                .reversed()
+            ).forEach(p -> {
                 if(p.getDoability() >= 100)
                     this.solvedFusion(actions, p, state);
                 else
