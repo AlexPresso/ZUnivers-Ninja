@@ -123,12 +123,12 @@ public class ProjectionServiceImpl implements ProjectionService {
 
     private void recursiveProjection(final ActionList actions, final ProjectionState state) {
         this.projectDaily(actions, state);
-        this.projectRecycle(actions, state, false);
-        this.projectRecycle(actions, state, true);
+        this.projectRecycleAndUpgrade(actions, state, false);
+        this.projectRecycleAndUpgrade(actions, state, true);
         this.projectFusions(actions, state, false);
         this.projectFusions(actions, state, true);
         //this.projectSubscription(actions, state);
-        this.projectUpgrades(actions, state);
+        this.projectGoldUpgrades(actions, state);
         this.projectInvocation(actions, state);
         this.projectCraft(actions, state);
         this.projectAscension(actions, state);
@@ -253,7 +253,6 @@ public class ProjectionServiceImpl implements ProjectionService {
 
             this.produceItem(state, projection.getFusion().getResult(), 1, projection.isGolden());
 
-            state.getScore().getAndAdd(projection.getProfit());
             projection.setSolved(true);
             this.addAction(state, actions, ActionType.FUSION, projection, 1);
 
@@ -277,7 +276,7 @@ public class ProjectionServiceImpl implements ProjectionService {
     }
 
 
-    private void projectUpgrades(final ActionList actions, final ProjectionState state) {
+    private void projectGoldUpgrades(final ActionList actions, final ProjectionState state) {
         final var normalInv = state.getInventory().getNormalInventory();
         final var goldenInv = state.getInventory().getGoldenInventory();
 
@@ -397,14 +396,17 @@ public class ProjectionServiceImpl implements ProjectionService {
     }
 
 
-    private void projectRecycle(final ActionList actions, final ProjectionState state, final boolean golden) {
+    private void projectRecycleAndUpgrade(final ActionList actions, final ProjectionState state, final boolean golden) {
         final var toRecycle = new ActionElementList();
         final var inventory = golden ?
             state.getInventory().getGoldenInventory() :
             state.getInventory().getNormalInventory();
+        final var upgradeInventory = golden ?
+            state.getInventory().getUpgradeGoldenInventory() :
+            state.getInventory().getUpgradeInventory();
 
         inventory.values().forEach(iProj -> {
-            if(!iProj.getItem().isRecyclable() || iProj.getQuantity() < 2)
+            if((!iProj.getItem().isRecyclable() && !iProj.getItem().isUpgradable()) || iProj.getQuantity() < 2)
                 return;
 
             final int count = iProj.getItem().getInputOfFusions().stream()
@@ -420,6 +422,20 @@ public class ProjectionServiceImpl implements ProjectionService {
             final var recycleValue = state.getConfigFor(iProj.getItem().getRarity(), golden).getRecycleValue();
 
             try {
+                if(iProj.getItem().isUpgradable()) {
+                    final var level = Optional.ofNullable(upgradeInventory.get(iProj.getItem().getId()))
+                        .map(ItemProjection::getUpgradeLevel)
+                        .orElse(0);
+
+                    if(level < iProj.getItem().getRarity()) {
+                        this.consumeItem(state, iProj.getItem(), golden);
+                        state.getUpgradeDust().getAndIncrement();
+                        this.addAction(state, actions, ActionType.CONSTELLATION, iProj.getItem());
+
+                        return;
+                    }
+                }
+
                 this.consumeItem(state, iProj.getItem(), count, golden);
                 money.getAndAdd(recycleValue * count);
                 toRecycle.add(new RecycleElement(iProj.getItem(), golden), count);
@@ -465,10 +481,6 @@ public class ProjectionServiceImpl implements ProjectionService {
             throw new ProjectionException("Not enough quantity to consume.");
 
         projection.consume(quantity);
-        state.getScore().getAndAdd(-((golden ? item.getScoreGolden() : item.getScore()) * quantity));
-
-        if (projection.getQuantity() == 0)
-            state.getScore().getAndAdd(-UNICITY_BONUS);
     }
 
     private void produceItem(final ProjectionState state, final Item item, final boolean golden) {
@@ -478,16 +490,10 @@ public class ProjectionServiceImpl implements ProjectionService {
         final var inventory = golden ?
             state.getInventory().getGoldenInventory() :
             state.getInventory().getNormalInventory();
-        final var projection = inventory.getOrDefault(item.getId(), new ItemProjection(item, 0));
-        final var wasEmpty = projection.getQuantity() == 0;
+        final var projection = inventory.getOrDefault(item.getId(), new ItemProjection(item, 0, 0));
 
         projection.produce(quantity);
         inventory.put(item.getId(), projection);
-
-        state.getScore().getAndAdd((golden ? item.getScoreGolden() : item.getScore()) * quantity);
-
-        if(wasEmpty)
-            state.getScore().getAndAdd(UNICITY_BONUS);
     }
 
     private void progressChallenges(final ProjectionState state, final ActionType type, final int quantity) {
@@ -501,10 +507,8 @@ public class ProjectionServiceImpl implements ProjectionService {
                 final var progress = c.getProgress();
                 progress.setCurrent(progress.getCurrent() + quantity);
 
-                if(progress.getCurrent() >= progress.getMax()) {
+                if(progress.getCurrent() >= progress.getMax())
                     state.getLoreDust().getAndAdd(c.getRewardLoreDust());
-                    state.getScore().getAndAdd(c.getScore());
-                }
             });
     }
     private int getProgress(final ProjectionState state,
@@ -547,9 +551,11 @@ public class ProjectionServiceImpl implements ProjectionService {
 
         summary.put("Poudre créatrice", new Change(user.getLoreDust(), state.getLoreDust().get()));
         summary.put("Cristaux d'histoire", new Change(user.getLoreFragment(), state.getLoreFragment().get()));
-        summary.put("Score", new Change(user.getScore(), state.getScore().get()));
+        summary.put("Eclats d'étoile", new Change(user.getUpgradeDust(), state.getUpgradeDust().get()));
         summary.put("Cartes normales", new Change(oldInventory.getNormalCount(), newInventory.getNormalCount()));
         summary.put("Cartes dorées", new Change(oldInventory.getGoldenCount(), newInventory.getGoldenCount()));
+        summary.put("Constellation normale", new Change(oldInventory.getUpgradeCount(), newInventory.getUpgradeCount()));
+        summary.put("Constellation dorée", new Change(oldInventory.getUpgradeGoldenCount(), newInventory.getUpgradeGoldenCount()));
         summary.put("Z Monnaie", new Change(user.getBalance(), state.getBalance().get()));
 
         initChallenges.forEach(c -> {

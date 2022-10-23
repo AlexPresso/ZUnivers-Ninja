@@ -12,13 +12,11 @@ public class FusionProjection implements ActionElement {
     private final Fusion fusion;
     private final boolean golden;
     private final Map<String, ItemProjection> sharedInventory;
-    private final int profit;
     private boolean solved;
 
 
     public FusionProjection(final Fusion fusion, final boolean golden, final Map<String, ItemProjection> sharedInventory) {
         this.fusion = fusion;
-        this.profit = golden ? this.fusion.getResult().getScoreGolden() : this.fusion.getResult().getScore();
         this.golden = golden;
         this.sharedInventory = sharedInventory;
         this.solved = false;
@@ -53,10 +51,6 @@ public class FusionProjection implements ActionElement {
         }
 
         return missing;
-    }
-
-    public int getProfit() {
-        return this.profit;
     }
 
     public double getDoability() {

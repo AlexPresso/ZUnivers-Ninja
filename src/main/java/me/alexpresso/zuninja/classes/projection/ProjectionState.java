@@ -22,7 +22,6 @@ public class ProjectionState {
     private final AtomicInteger loreFragment;
     private final AtomicInteger balance;
     private final AtomicInteger upgradeDust;
-    private final AtomicInteger score;
     private final VortexStats vortexStats;
     private final AtomicInteger ascensionsCount;
     private final AtomicReference<Set<FusionProjection>> normalFusions;
@@ -51,7 +50,6 @@ public class ProjectionState {
         this.loreFragment = new AtomicInteger(user.getLoreFragment());
         this.balance = new AtomicInteger(user.getBalance());
         this.upgradeDust = new AtomicInteger(user.getUpgradeDust());
-        this.score = new AtomicInteger(user.getScore());
         this.vortexStats = vortexStats;
         this.ascensionsCount = new AtomicInteger(vortexStats != null ? vortexStats.getLogCount() : 0);
         this.normalFusions = new AtomicReference<>(null);
@@ -87,10 +85,6 @@ public class ProjectionState {
 
     public AtomicInteger getUpgradeDust() {
         return this.upgradeDust;
-    }
-
-    public AtomicInteger getScore() {
-        return this.score;
     }
 
     public Optional<VortexStats> getVortexStats() {

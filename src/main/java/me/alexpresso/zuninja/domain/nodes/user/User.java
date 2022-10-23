@@ -16,7 +16,6 @@ public class User extends BaseGraphObject {
     private int loreDust;
     private int loreFragment;
     private int upgradeDust;
-    private int score;
     private int balance;
     private String lastAdviceMd5;
     @Relationship(type = "USER_STATISTICS", direction = Relationship.Direction.OUTGOING)
@@ -70,14 +69,6 @@ public class User extends BaseGraphObject {
     }
     public User setUpgradeDust(int upgradeDust) {
         this.upgradeDust = upgradeDust;
-        return this;
-    }
-
-    public int getScore() {
-        return score;
-    }
-    public User setScore(int score) {
-        this.score = score;
         return this;
     }
 

@@ -10,7 +10,7 @@ import org.springframework.data.neo4j.core.schema.TargetNode;
 public class InventoryItem extends BaseGraphObject {
     @JsonProperty("isGolden")
     private boolean golden;
-    private boolean constellation;
+    private int upgradeLevel;
     private int quantity;
     @TargetNode
     private Item item;
@@ -24,11 +24,14 @@ public class InventoryItem extends BaseGraphObject {
         return this;
     }
 
-    public boolean isConstellation() {
-        return this.constellation;
+    public boolean isUpgrade() {
+        return this.upgradeLevel > 0;
     }
-    public InventoryItem setConstellation(boolean constellation) {
-        this.constellation = constellation;
+    public int getUpgradeLevel() {
+        return this.upgradeLevel;
+    }
+    public InventoryItem setUpgradeLevel(int upgradeLevel) {
+        this.upgradeLevel = upgradeLevel;
         return this;
     }
 

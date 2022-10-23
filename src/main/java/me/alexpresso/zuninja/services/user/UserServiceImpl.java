@@ -100,13 +100,13 @@ public class UserServiceImpl implements UserService {
             .setLoreFragment(statistics.getUser().getLoreFragment())
             .setBalance(statistics.getUser().getBalance())
             .setUpgradeDust(statistics.getUser().getUpgradeDust())
-            .setScore(statistics.getUser().getScore())
             .setPosition(statistics.getUser().getPosition())
             .getInventory().clear();
 
         inventory.forEach(in -> user.getInventory().add(userInventory.getOrDefault(in.getId(), in)
             .setQuantity(in.getQuantity())
             .setGolden(in.isGolden())
+            .setUpgradeLevel(in.getUpgradeLevel())
             .setItem(items.get(in.getItem().getId()))
         ));
 
