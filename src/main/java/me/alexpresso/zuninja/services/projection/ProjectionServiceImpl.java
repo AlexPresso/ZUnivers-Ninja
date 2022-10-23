@@ -4,10 +4,7 @@ import me.alexpresso.zuninja.classes.cache.CacheEntry;
 import me.alexpresso.zuninja.classes.cache.MemoryCache;
 import me.alexpresso.zuninja.classes.challenge.Challenge;
 import me.alexpresso.zuninja.classes.projection.*;
-import me.alexpresso.zuninja.classes.projection.action.ActionElement;
-import me.alexpresso.zuninja.classes.projection.action.ActionElementList;
-import me.alexpresso.zuninja.classes.projection.action.ActionList;
-import me.alexpresso.zuninja.classes.projection.action.ActionType;
+import me.alexpresso.zuninja.classes.projection.action.*;
 import me.alexpresso.zuninja.classes.projection.recycle.RecycleElement;
 import me.alexpresso.zuninja.classes.projection.summary.Change;
 import me.alexpresso.zuninja.classes.vortex.VortexStats;
@@ -85,6 +82,7 @@ public class ProjectionServiceImpl implements ProjectionService {
         final var allItems = this.itemRepository.findAll();
         final var config = this.configService.fetchConfiguration();
         final var dailyMap = this.userService.fetchLootActivity(discordTag);
+        final var evolution = this.userService.fetchUserEvolution(discordTag);
         final var vortexStats = this.vortexService.getUserCurrentVortexStats(discordTag);
         final var challenges = this.userService.fetchUserChallenges(discordTag).stream()
             .filter(c -> c.getType().getActionType().isPresent())
@@ -95,7 +93,18 @@ public class ProjectionServiceImpl implements ProjectionService {
 
         this.tryInitNewDay(discordTag);
 
-        final var state = new ProjectionState(discordTag, user, activeEvents, vortexStats, allItems, config, challenges, dailyMap);
+        final var state = new ProjectionState(
+            discordTag,
+            user,
+            activeEvents,
+            vortexStats,
+            allItems,
+            config,
+            challenges,
+            dailyMap,
+            evolution
+        );
+
         this.recursiveProjection(actions, state);
 
         return this.makeSummary(actions, user, state, discordTag);
@@ -123,7 +132,7 @@ public class ProjectionServiceImpl implements ProjectionService {
         this.projectInvocation(actions, state);
         this.projectCraft(actions, state);
         this.projectAscension(actions, state);
-        this.projectChallenges(actions, state);
+        this.projectEvolution(actions, state);
 
         if(actions.hasChanged())
             this.recursiveProjection(actions.newCycle(), state);
@@ -347,10 +356,22 @@ public class ProjectionServiceImpl implements ProjectionService {
     }
 
 
-    private void projectChallenges(final ActionList actions, final ProjectionState state) {
+    private void projectEvolution(final ActionList actions, final ProjectionState state) {
+        final var evolutionDetail = state.getEvolutionDetail();
+        final var nextItem = evolutionDetail.getItems().stream()
+            .filter(i -> !i.isOwned())
+            .findFirst();
 
+        if(nextItem.isEmpty())
+            return;
 
-        state.getChallenges();
+        final var cost = evolutionDetail.getUpgradeCosts().get(evolutionDetail.getItems().indexOf(nextItem.get()));
+        if(state.getUpgradeDust().get() < cost)
+            return;
+
+        state.getUpgradeDust().getAndAdd(-cost);
+        nextItem.get().setOwned(true);
+        actions.addElement(new Action(ActionType.EVOLUTION, nextItem.get().getItem()));
     }
 
 

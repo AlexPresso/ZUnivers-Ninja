@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import me.alexpresso.zuninja.classes.activity.ActivityDetail;
 import me.alexpresso.zuninja.classes.challenge.Challenge;
 import me.alexpresso.zuninja.classes.challenge.ChallengeType;
+import me.alexpresso.zuninja.classes.item.EvolutionDetail;
 import me.alexpresso.zuninja.domain.nodes.item.Item;
 import me.alexpresso.zuninja.domain.nodes.user.User;
 import me.alexpresso.zuninja.domain.nodes.user.UserStatistics;
@@ -56,10 +57,23 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public List<InventoryItem> fetchUserInventory(final String discordTag) throws IOException, InterruptedException {
-        return (List<InventoryItem>) this.requestService.request(
+        final var inventory = (List<InventoryItem>) this.requestService.request(
             String.format("/public/inventory/%s", URLEncoder.encode(discordTag, StandardCharsets.UTF_8)),
             "GET",
             new TypeReference<List<InventoryItem>>() {}
+        );
+
+        //TODO: Merge constellation's inventory
+
+        return inventory;
+    }
+
+    @Override
+    public EvolutionDetail fetchUserEvolution(final String discordTag) throws IOException, InterruptedException {
+        return (EvolutionDetail) this.requestService.request(
+            String.format("/public/evolution/%s", URLEncoder.encode(discordTag, StandardCharsets.UTF_8)),
+            "GET",
+            new TypeReference<EvolutionDetail>() {}
         );
     }
 
