@@ -12,7 +12,7 @@
         <maven.compiler.source>11</maven.compiler.source>
         <maven.compiler.target>11</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <zuninjaversion>1.6.6</zuninjaversion>
+        <zuninjaversion>1.7.0</zuninjaversion>
         <springversion>2.7.4</springversion>
     </properties>
 

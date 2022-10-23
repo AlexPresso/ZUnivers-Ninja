@@ -33,7 +33,7 @@ public class EventServiceImpl implements EventService {
 
     @Override
     public List<Event> fetchEvents() throws IOException, InterruptedException {
-        return (List<Event>) this.requestService.request("/public/event", "GET", new TypeReference<List<Event>>() {});
+        return (List<Event>) this.requestService.request("/public/event/current", "GET", new TypeReference<List<Event>>() {});
     }
 
     @Override

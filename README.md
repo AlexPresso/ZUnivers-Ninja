@@ -20,6 +20,8 @@ This project is not affiliated with the ZUnivers's project. It's a community pro
 - ✅ `!craft` projection
 - ✅ `!ascension` projection
 - ✅ challenges projection
+- ✅ evolution projection
+- ✅ constellation projection
 - ✅ plugin system
 - (Soon) auto subscription based on a rentability check
 
