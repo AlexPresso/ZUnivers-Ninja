@@ -1,6 +1,7 @@
 package me.alexpresso.zuninja.services.user;
 
 import me.alexpresso.zuninja.classes.challenge.Challenge;
+import me.alexpresso.zuninja.classes.item.EvolutionDetail;
 import me.alexpresso.zuninja.domain.nodes.user.User;
 import me.alexpresso.zuninja.domain.nodes.user.UserStatistics;
 import me.alexpresso.zuninja.domain.relations.InventoryItem;
@@ -15,6 +16,8 @@ public interface UserService {
     UserStatistics fetchUserStatistics(String discordTag) throws IOException, InterruptedException;
 
     List<InventoryItem> fetchUserInventory(String discordTag) throws IOException, InterruptedException;
+
+    EvolutionDetail fetchUserEvolution(String discordTag) throws IOException, InterruptedException;
 
     Optional<User> getUser(String discordTag);
 

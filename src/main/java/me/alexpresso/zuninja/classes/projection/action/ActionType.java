@@ -10,6 +10,8 @@ public enum ActionType {
     LUCKY_RAYOU("lrlien"),
     DAILY("journa"),
     WEEKLY("bonus"),
+    CONSTELLATION("constellation"),
+    EVOLUTION("évolution"),
     SUBSCRIBE;
 
     private final String command;

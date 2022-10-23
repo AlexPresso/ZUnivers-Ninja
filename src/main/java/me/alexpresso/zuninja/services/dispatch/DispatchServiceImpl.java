@@ -65,7 +65,7 @@ public class DispatchServiceImpl implements DispatchService {
     public void dispatch(final ProjectionSummary summary, final String discordTag) throws NodeNotFoundException, NoSuchAlgorithmException {
         final var cmds = summary.getActions().stream()
             .filter(a -> a.getRunnable().isEmpty())
-            .map(a -> String.format("!%s %s", a.getType().getCommand(), a.getTarget().map(ActionElement::getIdentifier).orElse("")))
+            .map(a -> String.format("/%s %s", a.getType().getCommand(), a.getTarget().map(ActionElement::getIdentifier).orElse("")))
             .collect(Collectors.joining("\n"));
 
         final var user = this.userRepository.findByDiscordUserName(discordTag)
