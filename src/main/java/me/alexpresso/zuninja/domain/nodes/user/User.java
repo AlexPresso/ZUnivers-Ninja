@@ -15,6 +15,7 @@ public class User extends BaseGraphObject {
     private int position;
     private int loreDust;
     private int loreFragment;
+    private int upgradeDust;
     private int score;
     private int balance;
     private String lastAdviceMd5;
@@ -61,6 +62,14 @@ public class User extends BaseGraphObject {
     }
     public User setLoreFragment(int loreFragment) {
         this.loreFragment = loreFragment;
+        return this;
+    }
+
+    public int getUpgradeDust() {
+        return this.upgradeDust;
+    }
+    public User setUpgradeDust(int upgradeDust) {
+        this.upgradeDust = upgradeDust;
         return this;
     }
 

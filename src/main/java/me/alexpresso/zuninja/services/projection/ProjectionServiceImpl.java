@@ -275,7 +275,7 @@ public class ProjectionServiceImpl implements ProjectionService {
         normalInv.forEach((id, itemProj) -> {
             final var item = itemProj.getItem();
 
-            if(!item.isUpgradable() || !this.isInCurrentVortexPack(item))
+            if(!item.isGoldable() || !this.isInCurrentVortexPack(item))
                 return;
 
             final var cost = state.getConfigFor(item.getRarity(), true).getCraftValue();

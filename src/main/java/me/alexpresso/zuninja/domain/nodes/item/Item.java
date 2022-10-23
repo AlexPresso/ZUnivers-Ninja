@@ -36,6 +36,7 @@ public class Item extends BaseGraphObject implements ActionElement {
     private boolean invocable;
     private boolean recyclable;
     private boolean tradable;
+    private boolean goldable;
     private boolean upgradable;
 
 
@@ -123,7 +124,6 @@ public class Item extends BaseGraphObject implements ActionElement {
     public int getScore() {
         return score;
     }
-
     public void setScore(int score) {
         this.score = score;
     }
@@ -131,7 +131,6 @@ public class Item extends BaseGraphObject implements ActionElement {
     public int getScoreGolden() {
         return scoreGolden;
     }
-
     public void setScoreGolden(int scoreGolden) {
         this.scoreGolden = scoreGolden;
     }
@@ -139,7 +138,6 @@ public class Item extends BaseGraphObject implements ActionElement {
     public boolean isCounting() {
         return counting;
     }
-
     public Item setCounting(boolean counting) {
         this.counting = counting;
         return this;
@@ -148,7 +146,6 @@ public class Item extends BaseGraphObject implements ActionElement {
     public boolean isCraftable() {
         return craftable;
     }
-
     public Item setCraftable(boolean craftable) {
         this.craftable = craftable;
         return this;
@@ -157,7 +154,6 @@ public class Item extends BaseGraphObject implements ActionElement {
     public boolean isInvocable() {
         return invocable;
     }
-
     public Item setInvocable(boolean invocable) {
         this.invocable = invocable;
         return this;
@@ -166,7 +162,6 @@ public class Item extends BaseGraphObject implements ActionElement {
     public boolean isRecyclable() {
         return recyclable;
     }
-
     public Item setRecyclable(boolean recyclable) {
         this.recyclable = recyclable;
         return this;
@@ -175,16 +170,22 @@ public class Item extends BaseGraphObject implements ActionElement {
     public boolean isTradable() {
         return tradable;
     }
-
     public Item setTradable(boolean tradable) {
         this.tradable = tradable;
         return this;
     }
 
-    public boolean isUpgradable() {
-        return upgradable;
+    public boolean isGoldable() {
+        return goldable;
+    }
+    public Item setGoldable(boolean goldable) {
+        this.goldable = goldable;
+        return this;
     }
 
+    public boolean isUpgradable() {
+        return this.upgradable;
+    }
     public Item setUpgradable(boolean upgradable) {
         this.upgradable = upgradable;
         return this;
