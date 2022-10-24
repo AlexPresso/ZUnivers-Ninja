@@ -424,16 +424,13 @@ public class ProjectionServiceImpl implements ProjectionService {
 
             try {
                 if(iProj.getItem().isUpgradable()) {
-                    final int level = Optional.ofNullable(upgradeInventory.get(iProj.getItem().getId()))
-                        .map(ItemProjection::getUpgradeLevel)
-                        .orElse(0);
+                    final var upgradeProj = Optional.ofNullable(upgradeInventory.get(iProj.getItem().getId()))
+                        .orElse(this.produceItem(state, iProj.getItem(), 1, golden, true));
 
-                    if(level < iProj.getItem().getRarity()) {
-                        if(level == 0)
-                            this.produceItem(state, iProj.getItem(), 1, golden, true);
-
+                    if(upgradeProj.getUpgradeLevel() > 1) {
                         this.consumeItem(state, iProj.getItem(), golden);
                         state.getUpgradeDust().getAndIncrement();
+                        upgradeProj.decreaseLevel();
                         toUpgrade.add(new RecycleElement(iProj.getItem(), golden));
 
                         return;
@@ -495,7 +492,7 @@ public class ProjectionServiceImpl implements ProjectionService {
     private void produceItem(final ProjectionState state, final Item item, final int quantity, final boolean golden) {
         this.produceItem(state, item, quantity, golden, false);
     }
-    private void produceItem(final ProjectionState state, final Item item, final int quantity, final boolean golden, final boolean upgradeInventory) {
+    private ItemProjection produceItem(final ProjectionState state, final Item item, final int quantity, final boolean golden, final boolean upgradeInventory) {
         final Map<String, ItemProjection> inventory;
         if(upgradeInventory) {
             inventory = golden ?
@@ -507,10 +504,12 @@ public class ProjectionServiceImpl implements ProjectionService {
                 state.getInventory().getNormalInventory();
         }
 
-        final var projection = inventory.getOrDefault(item.getId(), new ItemProjection(item, 0, 0));
+        final var projection = inventory.getOrDefault(item.getId(), new ItemProjection(item, 0, upgradeInventory ? item.getRarity() + 1 : 0));
 
         projection.produce(quantity);
         inventory.put(item.getId(), projection);
+
+        return projection;
     }
 
     private void progressChallenges(final ProjectionState state, final ActionType type, final int quantity) {
