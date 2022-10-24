@@ -57,15 +57,11 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public List<InventoryItem> fetchUserInventory(final String discordTag) throws IOException, InterruptedException {
-        final var inventory = (List<InventoryItem>) this.requestService.request(
+        return (List<InventoryItem>) this.requestService.request(
             String.format("/public/inventory/%s", URLEncoder.encode(discordTag, StandardCharsets.UTF_8)),
             "GET",
             new TypeReference<List<InventoryItem>>() {}
         );
-
-        //TODO: Merge constellation's inventory
-
-        return inventory;
     }
 
     @Override
@@ -103,14 +99,17 @@ public class UserServiceImpl implements UserService {
             .setPosition(statistics.getUser().getPosition())
             .getInventory().clear();
 
-        inventory.forEach(in -> user.getInventory().add(userInventory.getOrDefault(in.getId(), in)
+        //Neo4J OGM is missing some relations when not persisting twice after cleaning Set
+        final var newUser = this.userRepository.save(user);
+
+        inventory.forEach(in -> newUser.getInventory().add(in
             .setQuantity(in.getQuantity())
             .setGolden(in.isGolden())
             .setUpgradeLevel(in.getUpgradeLevel())
             .setItem(items.get(in.getItem().getId()))
         ));
 
-        this.userRepository.save(user);
+        this.userRepository.save(newUser);
 
         logger.debug("Updated {}'s inventory.", discordTag);
     }

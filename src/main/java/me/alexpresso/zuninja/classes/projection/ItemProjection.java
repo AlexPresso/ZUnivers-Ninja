@@ -38,8 +38,8 @@ public class ItemProjection implements ActionElement {
     public void produce(final int quantity) {
         this.quantity += quantity;
     }
-    public void increaseLevel() {
-        this.upgradeLevel++;
+    public void decreaseLevel() {
+        this.upgradeLevel--;
     }
 
     @Override
