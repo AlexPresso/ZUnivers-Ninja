@@ -398,6 +398,7 @@ public class ProjectionServiceImpl implements ProjectionService {
 
     private void projectRecycleAndUpgrade(final ActionList actions, final ProjectionState state, final boolean golden) {
         final var toRecycle = new ActionElementList();
+        final var toUpgrade = new ActionElementList();
         final var inventory = golden ?
             state.getInventory().getGoldenInventory() :
             state.getInventory().getNormalInventory();
@@ -423,14 +424,17 @@ public class ProjectionServiceImpl implements ProjectionService {
 
             try {
                 if(iProj.getItem().isUpgradable()) {
-                    final var level = Optional.ofNullable(upgradeInventory.get(iProj.getItem().getId()))
+                    final int level = Optional.ofNullable(upgradeInventory.get(iProj.getItem().getId()))
                         .map(ItemProjection::getUpgradeLevel)
                         .orElse(0);
 
                     if(level < iProj.getItem().getRarity()) {
+                        if(level == 0)
+                            this.produceItem(state, iProj.getItem(), 1, golden, true);
+
                         this.consumeItem(state, iProj.getItem(), golden);
                         state.getUpgradeDust().getAndIncrement();
-                        this.addAction(state, actions, ActionType.CONSTELLATION, iProj.getItem());
+                        toUpgrade.add(new RecycleElement(iProj.getItem(), golden));
 
                         return;
                     }
@@ -444,6 +448,8 @@ public class ProjectionServiceImpl implements ProjectionService {
             }
         });
 
+        if(!toUpgrade.isEmpty())
+            this.addAction(state, actions, ActionType.CONSTELLATION, toUpgrade, 1);
         if(!toRecycle.isEmpty())
             this.addAction(state, actions, ActionType.RECYCLE, toRecycle, 1);
     }
@@ -484,12 +490,23 @@ public class ProjectionServiceImpl implements ProjectionService {
     }
 
     private void produceItem(final ProjectionState state, final Item item, final boolean golden) {
-        this.produceItem(state, item, 1, golden);
+        this.produceItem(state, item, 1, golden, false);
     }
     private void produceItem(final ProjectionState state, final Item item, final int quantity, final boolean golden) {
-        final var inventory = golden ?
-            state.getInventory().getGoldenInventory() :
-            state.getInventory().getNormalInventory();
+        this.produceItem(state, item, quantity, golden, false);
+    }
+    private void produceItem(final ProjectionState state, final Item item, final int quantity, final boolean golden, final boolean upgradeInventory) {
+        final Map<String, ItemProjection> inventory;
+        if(upgradeInventory) {
+            inventory = golden ?
+                state.getInventory().getUpgradeGoldenInventory() :
+                state.getInventory().getUpgradeInventory();
+        } else {
+            inventory = golden ?
+                state.getInventory().getGoldenInventory() :
+                state.getInventory().getNormalInventory();
+        }
+
         final var projection = inventory.getOrDefault(item.getId(), new ItemProjection(item, 0, 0));
 
         projection.produce(quantity);

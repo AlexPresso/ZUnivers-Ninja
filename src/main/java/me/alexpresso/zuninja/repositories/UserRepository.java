@@ -8,9 +8,4 @@ import java.util.Optional;
 
 public interface UserRepository extends Neo4jRepository<User, Long> {
     Optional<User> findByDiscordUserName(String username);
-
-    @Query(
-        "MATCH (u:User{discordUserName: $0}) RETURN u.discordId"
-    )
-    Optional<String> findDiscordIdByTag(String discordTag);
 }
