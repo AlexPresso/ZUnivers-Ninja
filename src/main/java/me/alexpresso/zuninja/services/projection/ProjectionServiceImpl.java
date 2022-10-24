@@ -364,7 +364,7 @@ public class ProjectionServiceImpl implements ProjectionService {
         if(nextItem.isEmpty())
             return;
 
-        final var cost = evolutionDetail.getUpgradeCosts().get(evolutionDetail.getItems().indexOf(nextItem.get()));
+        final var cost = evolutionDetail.getUpgradeCosts().get(evolutionDetail.getItems().indexOf(nextItem.get()) - 1);
         if(state.getUpgradeDust().get() < cost)
             return;
 
