@@ -3,6 +3,7 @@ package me.alexpresso.zuninja.services.projection;
 import me.alexpresso.zuninja.classes.cache.CacheEntry;
 import me.alexpresso.zuninja.classes.cache.MemoryCache;
 import me.alexpresso.zuninja.classes.challenge.Challenge;
+import me.alexpresso.zuninja.classes.item.ItemEvolutionDetail;
 import me.alexpresso.zuninja.classes.projection.*;
 import me.alexpresso.zuninja.classes.projection.action.*;
 import me.alexpresso.zuninja.classes.projection.recycle.RecycleElement;
@@ -357,20 +358,25 @@ public class ProjectionServiceImpl implements ProjectionService {
 
     private void projectEvolution(final ActionList actions, final ProjectionState state) {
         final var evolutionDetail = state.getEvolutionDetail();
-        final var nextItem = evolutionDetail.getItems().stream()
-            .filter(i -> !i.isOwned())
-            .findFirst();
+        final var currentItemIndex = evolutionDetail.getItems().stream()
+            .filter(ItemEvolutionDetail::isOwned)
+            .findFirst()
+            .map(i -> evolutionDetail.getItems().indexOf(i));
 
-        if(nextItem.isEmpty())
+        if(currentItemIndex.isEmpty())
             return;
 
-        final var cost = evolutionDetail.getUpgradeCosts().get(evolutionDetail.getItems().indexOf(nextItem.get()) - 1);
+        if(evolutionDetail.getItems().size() < currentItemIndex.get() + 1)
+            return;
+
+        final var nextItem = evolutionDetail.getItems().get(currentItemIndex.get() + 1);
+        final var cost = evolutionDetail.getUpgradeCosts().get(evolutionDetail.getItems().indexOf(nextItem) - 1);
         if(state.getUpgradeDust().get() < cost)
             return;
 
         state.getUpgradeDust().getAndAdd(-cost);
-        nextItem.get().setOwned(true);
-        actions.addElement(new Action(ActionType.EVOLUTION, nextItem.get().getItem()));
+        nextItem.setOwned(true);
+        actions.addElement(new Action(ActionType.EVOLUTION, nextItem.getItem()));
     }
 
 
