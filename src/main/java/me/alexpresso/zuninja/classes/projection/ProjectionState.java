@@ -3,6 +3,7 @@ package me.alexpresso.zuninja.classes.projection;
 import me.alexpresso.zuninja.classes.challenge.Challenge;
 import me.alexpresso.zuninja.classes.config.Config;
 import me.alexpresso.zuninja.classes.config.ConfigPart;
+import me.alexpresso.zuninja.classes.item.EvolutionDetail;
 import me.alexpresso.zuninja.classes.vortex.VortexStats;
 import me.alexpresso.zuninja.domain.nodes.event.Event;
 import me.alexpresso.zuninja.domain.nodes.item.Item;
@@ -20,7 +21,7 @@ public class ProjectionState {
     private final AtomicInteger loreDust;
     private final AtomicInteger loreFragment;
     private final AtomicInteger balance;
-    private final AtomicInteger score;
+    private final AtomicInteger upgradeDust;
     private final VortexStats vortexStats;
     private final AtomicInteger ascensionsCount;
     private final AtomicReference<Set<FusionProjection>> normalFusions;
@@ -31,6 +32,7 @@ public class ProjectionState {
     private final AtomicBoolean subscribed;
     private final Set<Challenge> challenges;
     private final Map<String, Integer> dailyMap;
+    private final EvolutionDetail evolutionDetail;
 
 
     public ProjectionState(final String discordTag,
@@ -40,13 +42,14 @@ public class ProjectionState {
                            final List<Item> allItems,
                            final Config config,
                            final Set<Challenge> challenges,
-                           final Map<String, Integer> dailyMap) {
+                           final Map<String, Integer> dailyMap,
+                           final EvolutionDetail evolutionDetail) {
         this.discordTag = discordTag;
         this.inventory = new InventoryProjection(user);
         this.loreDust = new AtomicInteger(user.getLoreDust());
         this.loreFragment = new AtomicInteger(user.getLoreFragment());
         this.balance = new AtomicInteger(user.getBalance());
-        this.score = new AtomicInteger(user.getScore());
+        this.upgradeDust = new AtomicInteger(user.getUpgradeDust());
         this.vortexStats = vortexStats;
         this.ascensionsCount = new AtomicInteger(vortexStats != null ? vortexStats.getLogCount() : 0);
         this.normalFusions = new AtomicReference<>(null);
@@ -57,6 +60,7 @@ public class ProjectionState {
         this.subscribed = new AtomicBoolean(user.getStatistics().isSubscribed());
         this.challenges = challenges;
         this.dailyMap = dailyMap;
+        this.evolutionDetail = evolutionDetail;
     }
 
     public String getDiscordTag() {
@@ -79,8 +83,8 @@ public class ProjectionState {
         return this.balance;
     }
 
-    public AtomicInteger getScore() {
-        return this.score;
+    public AtomicInteger getUpgradeDust() {
+        return this.upgradeDust;
     }
 
     public Optional<VortexStats> getVortexStats() {
@@ -128,5 +132,9 @@ public class ProjectionState {
 
     public Map<String, Integer> getDailyMap() {
         return this.dailyMap;
+    }
+
+    public EvolutionDetail getEvolutionDetail() {
+        return this.evolutionDetail;
     }
 }

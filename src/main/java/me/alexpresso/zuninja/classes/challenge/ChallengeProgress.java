@@ -8,6 +8,15 @@ public class ChallengeProgress {
     private int current;
     private int max;
 
+
+    public ChallengeProgress() {}
+    public ChallengeProgress(final String type, final int current, final int max) {
+        this.type = type;
+        this.current = current;
+        this.max = max;
+    }
+
+
     public String getType() {
         return this.type;
     }

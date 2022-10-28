@@ -2,8 +2,8 @@
 <img src="https://repository-images.githubusercontent.com/420819440/51db7016-b325-4d1b-a1d3-ce82d771f58b" height="320px">
 </div>
 
-This project aims to suggest one (or more) users, the best actions scenario to take while never losing score on the ZUnivers card game.
-It's currently based on a recursive method which always try projections until it cannot do anything more than the previous iteration. 
+This project aims to suggest to one (or more) users: the best actions scenario to take.
+It's currently based on a recursive method which always tries projections until it cannot do anything more than the previous iteration. 
 
 I'm planning to move the projection system to a tree calculation system, generating all possible scenarios and returning the one providing the best score. 
 
@@ -20,6 +20,8 @@ This project is not affiliated with the ZUnivers's project. It's a community pro
 - ✅ `!craft` projection
 - ✅ `!ascension` projection
 - ✅ challenges projection
+- ✅ evolution projection
+- ✅ constellation projection
 - ✅ plugin system
 - (Soon) auto subscription based on a rentability check
 

@@ -9,21 +9,20 @@ import java.util.Map;
 public class Challenge {
     private String id;
     private ChallengeType type;
-    private int score;
     private int rewardLoreDust;
     private ChallengeProgress progress;
+    private ChallengeLog challengeLog;
     private String description;
 
-
-    public int getScore() {
-        return this.score;
-    }
 
     public int getRewardLoreDust() {
         return this.rewardLoreDust;
     }
 
     public ChallengeProgress getProgress() {
+        if(this.progress == null)
+            return new ChallengeProgress("osef", this.challengeLog != null ? 1 : 0, 1);
+
         return this.progress;
     }
 
@@ -43,7 +42,6 @@ public class Challenge {
     @JsonProperty("challenge")
     public void unpackChallenge(final Map<String, Object> challenge) {
         challenge.computeIfPresent("id", (k, v) -> this.id = v.toString());
-        challenge.computeIfPresent("score", (k, v) -> this.score = Integer.parseInt(v.toString()));
         challenge.computeIfPresent("rewardLoreDust", (k, v) -> this.rewardLoreDust = Integer.parseInt(v.toString()));
         challenge.computeIfPresent("description", (k, v) -> this.description = v.toString());
         challenge.computeIfPresent("type", (k, v) -> {

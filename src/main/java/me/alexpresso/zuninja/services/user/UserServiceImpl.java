@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import me.alexpresso.zuninja.classes.activity.ActivityDetail;
 import me.alexpresso.zuninja.classes.challenge.Challenge;
 import me.alexpresso.zuninja.classes.challenge.ChallengeType;
+import me.alexpresso.zuninja.classes.item.EvolutionDetail;
 import me.alexpresso.zuninja.domain.nodes.item.Item;
 import me.alexpresso.zuninja.domain.nodes.user.User;
 import me.alexpresso.zuninja.domain.nodes.user.UserStatistics;
@@ -64,6 +65,15 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    public EvolutionDetail fetchUserEvolution(final String discordTag) throws IOException, InterruptedException {
+        return (EvolutionDetail) this.requestService.request(
+            String.format("/public/evolution/%s", URLEncoder.encode(discordTag, StandardCharsets.UTF_8)),
+            "GET",
+            new TypeReference<EvolutionDetail>() {}
+        );
+    }
+
+    @Override
     public Optional<User> getUser(final String discordTag) {
         return this.userRepository.findByDiscordUserName(discordTag);
     }
@@ -85,17 +95,21 @@ public class UserServiceImpl implements UserService {
             .setLoreDust(statistics.getUser().getLoreDust())
             .setLoreFragment(statistics.getUser().getLoreFragment())
             .setBalance(statistics.getUser().getBalance())
-            .setScore(statistics.getUser().getScore())
+            .setUpgradeDust(statistics.getUser().getUpgradeDust())
             .setPosition(statistics.getUser().getPosition())
             .getInventory().clear();
 
-        inventory.forEach(in -> user.getInventory().add(userInventory.getOrDefault(in.getId(), in)
+        //Neo4J OGM is missing some relations when not persisting twice after cleaning Set
+        final var newUser = this.userRepository.save(user);
+
+        inventory.forEach(in -> newUser.getInventory().add(in
             .setQuantity(in.getQuantity())
             .setGolden(in.isGolden())
+            .setUpgradeLevel(in.getUpgradeLevel())
             .setItem(items.get(in.getItem().getId()))
         ));
 
-        this.userRepository.save(user);
+        this.userRepository.save(newUser);
 
         logger.debug("Updated {}'s inventory.", discordTag);
     }
