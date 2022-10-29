@@ -1,9 +1,11 @@
 package me.alexpresso.zuninja.classes.projection;
 
+import me.alexpresso.zuninja.domain.nodes.item.Item;
 import me.alexpresso.zuninja.domain.nodes.user.User;
 
 import java.util.Collection;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 public class InventoryProjection {
@@ -63,5 +65,11 @@ public class InventoryProjection {
         return projections.stream()
             .filter(p -> p.getQuantity() > 0)
             .count();
+    }
+
+    public int getCountFor(final Map<String, ItemProjection> inventory, final Item item) {
+        return Optional.ofNullable(inventory.getOrDefault(item.getId(), null))
+            .map(ItemProjection::getQuantity)
+            .orElse(0);
     }
 }

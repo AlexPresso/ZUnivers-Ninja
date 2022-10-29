@@ -51,8 +51,6 @@ public class ProjectionServiceImpl implements ProjectionService {
     private final static int VORTEX_MAX = 6;
     private final static int INVOCATION_COST = 1000;
     private final static int PER_DAY_ASCENSIONS = 2;
-    private final static int UNICITY_BONUS = 10;
-    private final static int SUBSCRIPTION_COST = 4000;
     private final static int DAILY_REWARD = 1200;
 
 
@@ -128,7 +126,6 @@ public class ProjectionServiceImpl implements ProjectionService {
         this.projectRecycleAndUpgrade(actions, state, true);
         this.projectFusions(actions, state, false);
         this.projectFusions(actions, state, true);
-        //this.projectSubscription(actions, state);
         this.projectGoldUpgrades(actions, state);
         this.projectInvocation(actions, state);
         this.projectCraft(actions, state);
@@ -264,19 +261,6 @@ public class ProjectionServiceImpl implements ProjectionService {
     }
 
 
-    private void projectSubscription(final ActionList actions, final ProjectionState state) {
-        if(state.getSubscribed().get() || state.getLoreDust().get() < SUBSCRIPTION_COST)
-            return;
-
-        //TODO: rentability check on 2000
-        //TODO: Auto subscription + Keycloak auth negociation
-
-        state.getLoreDust().getAndAdd(-SUBSCRIPTION_COST);
-        this.addAction(state, actions, ActionType.SUBSCRIBE, null);
-        state.getSubscribed().set(true);
-    }
-
-
     private void projectGoldUpgrades(final ActionList actions, final ProjectionState state) {
         final var normalInv = state.getInventory().getNormalInventory();
         final var goldenInv = state.getInventory().getGoldenInventory();
@@ -393,7 +377,7 @@ public class ProjectionServiceImpl implements ProjectionService {
         final var cost = state.getConfigFor(i.getRarity(), false).getCraftValue();
         final var money = state.getMoneyFor(i);
 
-        if(ownedQuantity > 0 || money.get() < cost)
+        if(ownedQuantity >= this.getNeededQuantity(state, i, false) || money.get() < cost)
             return;
 
         this.produceItem(state, i, false);
@@ -430,7 +414,7 @@ public class ProjectionServiceImpl implements ProjectionService {
 
             try {
                 if(iProj.getItem().isUpgradable()) {
-                    final var upgradeProj = Optional.ofNullable(upgradeInventory.get(iProj.getItem().getId()))
+                    final var upgradeProj = Optional.ofNullable(upgradeInventory.getOrDefault(iProj.getItem().getId(), null))
                         .orElse(this.produceItem(state, iProj.getItem(), 1, golden, true));
 
                     if(upgradeProj.getUpgradeLevel() > 1) {
@@ -518,6 +502,32 @@ public class ProjectionServiceImpl implements ProjectionService {
         return projection;
     }
 
+
+    private int getNeededQuantity(final ProjectionState state, final Item item, final boolean golden) {
+        int quantity = 1;
+        final var inventory = golden ?
+            state.getInventory().getGoldenInventory() :
+            state.getInventory().getNormalInventory();
+
+        //Add needed quantity to make unresolved fusion
+        quantity += item.getInputOfFusions().stream()
+            .filter(itf -> state.getInventory().getCountFor(inventory, itf.getFusion().getResult()) < 1)
+            .mapToInt(InputToFusion::getQuantity)
+            .sum();
+
+        if(item.isUpgradable()) {
+            final var upgradeInventory = golden ?
+                state.getInventory().getUpgradeGoldenInventory() :
+                state.getInventory().getUpgradeInventory();
+
+            //Add needed quantity for constellation upgrades
+            quantity += Optional.ofNullable(upgradeInventory.getOrDefault(item.getId(), null))
+                .map(ItemProjection::getUpgradeLevel)
+                .orElse(item.getRarity() + 1);
+        }
+
+        return quantity;
+    }
     private void progressChallenges(final ProjectionState state, final ActionType type, final int quantity) {
         if(state.getChallenges().isEmpty())
             return;
