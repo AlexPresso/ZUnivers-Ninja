@@ -122,8 +122,10 @@ public class ProjectionServiceImpl implements ProjectionService {
 
     private void recursiveProjection(final ActionList actions, final ProjectionState state) {
         this.projectDaily(actions, state);
-        this.projectRecycleAndUpgrade(actions, state, false);
-        this.projectRecycleAndUpgrade(actions, state, true);
+        this.projectRecycle(actions, state, false);
+        this.projectRecycle(actions, state, true);
+        this.projectUpgrades(actions, state, false);
+        this.projectUpgrades(actions, state, true);
         this.projectFusions(actions, state, false);
         this.projectFusions(actions, state, true);
         this.projectGoldUpgrades(actions, state);
@@ -377,7 +379,7 @@ public class ProjectionServiceImpl implements ProjectionService {
         final var cost = state.getConfigFor(i.getRarity(), false).getCraftValue();
         final var money = state.getMoneyFor(i);
 
-        if(ownedQuantity >= this.getNeededQuantity(state, i, false) || money.get() < cost)
+        if(ownedQuantity >= this.getCountProjection(state, i, false).getTotalNeeded() || money.get() < cost)
             return;
 
         this.produceItem(state, i, false);
@@ -386,8 +388,39 @@ public class ProjectionServiceImpl implements ProjectionService {
     }
 
 
-    private void projectRecycleAndUpgrade(final ActionList actions, final ProjectionState state, final boolean golden) {
+    private void projectRecycle(final ActionList actions, final ProjectionState state, final boolean golden) {
         final var toRecycle = new ActionElementList();
+        final var inventory = golden ?
+            state.getInventory().getGoldenInventory() :
+            state.getInventory().getNormalInventory();
+
+        inventory.values().forEach(iProj -> {
+            if(!iProj.getItem().isRecyclable() || iProj.getQuantity() < 2)
+                return;
+
+            final var countProjection = this.getCountProjection(state, iProj.getItem(), golden);
+
+            if(iProj.getQuantity() <= countProjection.getTotalNeeded())
+                return;
+
+            final var money = state.getMoneyFor(iProj.getItem());
+            final var recycleValue = state.getConfigFor(iProj.getItem().getRarity(), golden).getRecycleValue();
+            final var count = iProj.getQuantity() - countProjection.getTotalNeeded();
+
+            try {
+                this.consumeItem(state, iProj.getItem(), count , golden);
+                money.getAndAdd(recycleValue * count);
+                toRecycle.add(new RecycleElement(iProj.getItem(), golden), count);
+            } catch (ProjectionException e) {
+                logger.error(e.getMessage());
+            }
+        });
+
+        if(!toRecycle.isEmpty())
+            this.addAction(state, actions, ActionType.RECYCLE, toRecycle, 1);
+    }
+
+    private void projectUpgrades(final ActionList actions, final ProjectionState state, final boolean golden) {
         final var toUpgrade = new ActionElementList();
         final var inventory = golden ?
             state.getInventory().getGoldenInventory() :
@@ -397,39 +430,19 @@ public class ProjectionServiceImpl implements ProjectionService {
             state.getInventory().getUpgradeInventory();
 
         inventory.values().forEach(iProj -> {
-            if((!iProj.getItem().isRecyclable() && !iProj.getItem().isUpgradable()) || iProj.getQuantity() < 2)
+            if(!iProj.getItem().isUpgradable() || iProj.getQuantity() < 2)
                 return;
-
-            final int count = iProj.getItem().getInputOfFusions().stream()
-                .map(InputToFusion::getQuantity)
-                .reduce(Integer::sum)
-                .map(q -> iProj.getQuantity() - (q + 1))
-                .orElse(iProj.getQuantity() - 1);
-
-            if(count <= 0)
-                return;
-
-            final var money = state.getMoneyFor(iProj.getItem());
-            final var recycleValue = state.getConfigFor(iProj.getItem().getRarity(), golden).getRecycleValue();
 
             try {
-                if(iProj.getItem().isUpgradable()) {
-                    final var upgradeProj = Optional.ofNullable(upgradeInventory.getOrDefault(iProj.getItem().getId(), null))
-                        .orElse(this.produceItem(state, iProj.getItem(), 1, golden, true));
+                final var upgradeProj = Optional.ofNullable(upgradeInventory.getOrDefault(iProj.getItem().getId(), null))
+                    .orElse(this.produceItem(state, iProj.getItem(), 1, golden, true));
 
-                    if(upgradeProj.getUpgradeLevel() > 1) {
-                        this.consumeItem(state, iProj.getItem(), golden);
-                        state.getUpgradeDust().getAndIncrement();
-                        upgradeProj.decreaseLevel();
-                        toUpgrade.add(new RecycleElement(iProj.getItem(), golden));
-
-                        return;
-                    }
+                if(upgradeProj.getUpgradeLevel() > 1) {
+                    this.consumeItem(state, iProj.getItem(), golden);
+                    state.getUpgradeDust().getAndIncrement();
+                    upgradeProj.decreaseLevel();
+                    toUpgrade.add(new RecycleElement(iProj.getItem(), golden));
                 }
-
-                this.consumeItem(state, iProj.getItem(), count, golden);
-                money.getAndAdd(recycleValue * count);
-                toRecycle.add(new RecycleElement(iProj.getItem(), golden), count);
             } catch (ProjectionException e) {
                 logger.error(e.getMessage());
             }
@@ -437,8 +450,6 @@ public class ProjectionServiceImpl implements ProjectionService {
 
         if(!toUpgrade.isEmpty())
             this.addAction(state, actions, ActionType.CONSTELLATION, toUpgrade, 1);
-        if(!toRecycle.isEmpty())
-            this.addAction(state, actions, ActionType.RECYCLE, toRecycle, 1);
     }
 
 
@@ -503,30 +514,30 @@ public class ProjectionServiceImpl implements ProjectionService {
     }
 
 
-    private int getNeededQuantity(final ProjectionState state, final Item item, final boolean golden) {
-        int quantity = 1;
+    private ItemCountProjection getCountProjection(final ProjectionState state, final Item item, final boolean golden) {
+        final var count = new ItemCountProjection();
         final var inventory = golden ?
             state.getInventory().getGoldenInventory() :
             state.getInventory().getNormalInventory();
 
-        //Add needed quantity to make unresolved fusion
-        quantity += item.getInputOfFusions().stream()
+        count.getNeededForFusions().set(item.getInputOfFusions().stream()
             .filter(itf -> state.getInventory().getCountFor(inventory, itf.getFusion().getResult()) < 1)
             .mapToInt(InputToFusion::getQuantity)
-            .sum();
+            .sum()
+        );
 
         if(item.isUpgradable()) {
             final var upgradeInventory = golden ?
                 state.getInventory().getUpgradeGoldenInventory() :
                 state.getInventory().getUpgradeInventory();
 
-            //Add needed quantity for constellation upgrades
-            quantity += Optional.ofNullable(upgradeInventory.getOrDefault(item.getId(), null))
+            count.getNeededForUpgrades().set(Optional.ofNullable(upgradeInventory.getOrDefault(item.getId(), null))
                 .map(ItemProjection::getUpgradeLevel)
-                .orElse(item.getRarity() + 1);
+                .orElse(item.getRarity() + 1)
+            );
         }
 
-        return quantity;
+        return count;
     }
     private void progressChallenges(final ProjectionState state, final ActionType type, final int quantity) {
         if(state.getChallenges().isEmpty())
