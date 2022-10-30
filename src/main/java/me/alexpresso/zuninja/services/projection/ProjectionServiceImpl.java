@@ -264,10 +264,11 @@ public class ProjectionServiceImpl implements ProjectionService {
 
     private void projectGoldUpgrades(final ActionList actions, final ProjectionState state) {
         state.getInventory().getNormalInventory().values().stream()
+            .filter(ip -> ip.getQuantity() > ItemCountProjection.NEEDED_BASE)
             .filter(ip -> ip.getItem().isGoldable() && this.isInCurrentVortexPack(ip.getItem()))
             .forEach(iProj -> {
                 final var item = iProj.getItem();
-                final var goldenQuantity = state.getInventory().getQuantity(state.getInventory().getGoldenInventory(), iProj.getItem());
+                final var goldenQuantity = state.getInventory().getQuantity(state.getInventory().getGoldenInventory(), item);
 
                 if(goldenQuantity >= iProj.getCountProjection().getNeededForEnchant().get())
                     return;
