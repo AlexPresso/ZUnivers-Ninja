@@ -30,7 +30,6 @@ public class ItemProjection implements ActionElement {
         this.inventory = inventory;
         this.golden = golden;
 
-        this.initCountProjection();
     }
 
     private void initCountProjection() {
@@ -82,6 +81,10 @@ public class ItemProjection implements ActionElement {
     }
 
     public ItemCountProjection getCountProjection() {
+        //Improves performances by only calculating needed countProjection and only calculating it once
+        if(this.countProjection == null)
+            this.initCountProjection();
+
         return this.countProjection;
     }
 
