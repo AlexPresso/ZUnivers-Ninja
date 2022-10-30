@@ -11,8 +11,7 @@ public enum ActionType {
     DAILY("journa"),
     WEEKLY("bonus"),
     CONSTELLATION("constellation"),
-    EVOLUTION("évolution"),
-    SUBSCRIBE;
+    EVOLUTION("évolution");
 
     private final String command;
 

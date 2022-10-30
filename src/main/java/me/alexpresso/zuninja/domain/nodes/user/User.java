@@ -83,9 +83,8 @@ public class User extends BaseGraphObject {
     public String getLastAdviceMd5() {
         return this.lastAdviceMd5;
     }
-    public User setLastAdviceMd5(String lastAdviceMd5) {
+    public void setLastAdviceMd5(String lastAdviceMd5) {
         this.lastAdviceMd5 = lastAdviceMd5;
-        return this;
     }
 
     public UserStatistics getStatistics() {
