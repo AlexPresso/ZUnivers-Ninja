@@ -39,11 +39,25 @@ public class ItemProjection implements ActionElement {
             this.inventory.getGoldenInventory() :
             this.inventory.getNormalInventory();
 
+        //On each card (golden + normal) get number of cards needed to achieve unresolved fusions
         this.countProjection.getNeededForFusions().set(item.getInputOfFusions().stream()
             .filter(itf -> this.inventory.getQuantity(inventory, itf.getFusion().getResult()) < 1)
             .mapToInt(InputToFusion::getQuantity)
             .sum()
         );
+
+        if(!golden) {
+            //On normal cards, get number of cards needed (to craft) to achieve future enchanted unresolved fusions
+            this.countProjection.getNeededForEnchantFusion().set(item.getInputOfFusions().stream()
+                .filter(itf -> this.inventory.getQuantity(this.inventory.getGoldenInventory(), itf.getFusion().getResult()) < 1)
+                .mapToInt(InputToFusion::getQuantity)
+                .sum()
+            );
+
+            //Add NEEDED_BASE to craft if golden card is not present in inventory
+            if(this.inventory.getQuantity(this.inventory.getGoldenInventory(), item) < 1)
+                this.countProjection.getNeededForEnchant().set(ItemCountProjection.NEEDED_BASE);
+        }
 
         if(item.isUpgradable()) {
             final var upgradeInventory = golden ?
