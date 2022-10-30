@@ -11,7 +11,6 @@ import me.alexpresso.zuninja.classes.projection.summary.Change;
 import me.alexpresso.zuninja.classes.vortex.VortexStats;
 import me.alexpresso.zuninja.domain.nodes.item.Item;
 import me.alexpresso.zuninja.domain.nodes.user.User;
-import me.alexpresso.zuninja.domain.relations.InputToFusion;
 import me.alexpresso.zuninja.exceptions.NodeNotFoundException;
 import me.alexpresso.zuninja.exceptions.ProjectionException;
 import me.alexpresso.zuninja.repositories.EventRepository;
@@ -375,11 +374,11 @@ public class ProjectionServiceImpl implements ProjectionService {
         if(!i.isCraftable() || !this.isInCurrentVortexPack(i))
             return;
 
-        final var ownedQuantity = inventory.containsKey(i.getId()) ? inventory.get(i.getId()).getQuantity() : 0;
+        final var ownedQuantity = state.getInventory().getQuantity(inventory, i);
         final var cost = state.getConfigFor(i.getRarity(), false).getCraftValue();
         final var money = state.getMoneyFor(i);
 
-        if(ownedQuantity >= this.getCountProjection(state, i, false).getTotalNeeded() || money.get() < cost)
+        if(ownedQuantity >= state.getInventory().getCountProjection(inventory, i).getTotalNeeded() || money.get() < cost)
             return;
 
         this.produceItem(state, i, false);
@@ -398,7 +397,7 @@ public class ProjectionServiceImpl implements ProjectionService {
             if(!iProj.getItem().isRecyclable() || iProj.getQuantity() < 2)
                 return;
 
-            final var countProjection = this.getCountProjection(state, iProj.getItem(), golden);
+            final var countProjection = state.getInventory().getCountProjection(inventory, iProj.getItem());
 
             if(iProj.getQuantity() <= countProjection.getTotalNeeded())
                 return;
@@ -505,7 +504,10 @@ public class ProjectionServiceImpl implements ProjectionService {
                 state.getInventory().getNormalInventory();
         }
 
-        final var projection = inventory.getOrDefault(item.getId(), new ItemProjection(item, 0, upgradeInventory ? item.getRarity() + 1 : 0));
+        final var projection = inventory.getOrDefault(
+            item.getId(),
+            new ItemProjection(item, 0, upgradeInventory ? item.getRarity() + 1 : 0, state.getInventory(), golden)
+        );
 
         projection.produce(quantity);
         inventory.put(item.getId(), projection);
@@ -514,31 +516,6 @@ public class ProjectionServiceImpl implements ProjectionService {
     }
 
 
-    private ItemCountProjection getCountProjection(final ProjectionState state, final Item item, final boolean golden) {
-        final var count = new ItemCountProjection();
-        final var inventory = golden ?
-            state.getInventory().getGoldenInventory() :
-            state.getInventory().getNormalInventory();
-
-        count.getNeededForFusions().set(item.getInputOfFusions().stream()
-            .filter(itf -> state.getInventory().getCountFor(inventory, itf.getFusion().getResult()) < 1)
-            .mapToInt(InputToFusion::getQuantity)
-            .sum()
-        );
-
-        if(item.isUpgradable()) {
-            final var upgradeInventory = golden ?
-                state.getInventory().getUpgradeGoldenInventory() :
-                state.getInventory().getUpgradeInventory();
-
-            count.getNeededForUpgrades().set(Optional.ofNullable(upgradeInventory.getOrDefault(item.getId(), null))
-                .map(ItemProjection::getUpgradeLevel)
-                .orElse(item.getRarity() + 1)
-            );
-        }
-
-        return count;
-    }
     private void progressChallenges(final ProjectionState state, final ActionType type, final int quantity) {
         if(state.getChallenges().isEmpty())
             return;
