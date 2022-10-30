@@ -89,6 +89,17 @@ public class InventoryProjection {
             .orElse(0);
     }
 
+    /**
+     * get ItemCountProjection instance
+     * <p>
+     * Note: if the item is not in the specified inventory, it will return a new default instance (with NEEDED_BASE > 0)
+     * because the ItemProjection will be created later in the projection (with a null ItemCountProjection), it will
+     * later be initialized and calculted with the right values of needed amounts.
+     * </p>
+     * @param inventory inventory
+     * @param item item
+     * @return ItemCountProjection
+     */
     public ItemCountProjection getCountProjection(final Map<String, ItemProjection> inventory, final Item item) {
         return Optional.ofNullable(inventory.getOrDefault(item.getId(), null))
             .map(ItemProjection::getCountProjection)

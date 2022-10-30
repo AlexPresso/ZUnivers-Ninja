@@ -7,20 +7,17 @@ public class ItemCountProjection {
     private final AtomicInteger neededForUpgrades;
     private final AtomicInteger neededForFusions;
     private final AtomicInteger neededForEnchant;
-    private final AtomicInteger neededForEnchantFusion;
 
 
     public ItemCountProjection() {
-        this(0, 0, 0, 0);
+        this(0, 0, 0);
     }
     public ItemCountProjection(final int neededForUpgrades,
                                final int neededForFusions,
-                               final int neededForEnchant,
-                               final int neededForEnchatFusion) {
+                               final int neededForEnchant) {
         this.neededForUpgrades = new AtomicInteger(neededForUpgrades);
         this.neededForFusions = new AtomicInteger(neededForFusions);
         this.neededForEnchant = new AtomicInteger(neededForEnchant);
-        this.neededForEnchantFusion = new AtomicInteger(neededForEnchatFusion);
     }
 
     public int getNeededBase() {
@@ -39,15 +36,10 @@ public class ItemCountProjection {
         return this.neededForEnchant;
     }
 
-    public AtomicInteger getNeededForEnchantFusion() {
-        return this.neededForEnchantFusion;
-    }
-
     public int getTotalNeeded() {
         return this.neededForUpgrades.get() +
             this.neededForFusions.get() +
             this.neededForEnchant.get() +
-            this.neededForEnchantFusion.get() +
             NEEDED_BASE;
     }
 }
