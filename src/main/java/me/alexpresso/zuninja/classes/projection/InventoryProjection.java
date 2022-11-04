@@ -24,24 +24,24 @@ public class InventoryProjection {
     }
 
     private void init(final User user) {
-        for(final var item : user.getInventory()) {
+        for(final var inventoryItem : user.getInventory()) {
             final Map<String, ItemProjection> inventory;
 
-            if(item.isGolden()) {
-                if(item.isUpgrade()) {
+            if(inventoryItem.isGolden()) {
+                if(inventoryItem.isUpgrade()) {
                     inventory = upgradeGoldenInventory;
                 } else {
                     inventory = goldenInventory;
                 }
             } else {
-                if(item.isUpgrade()) {
+                if(inventoryItem.isUpgrade()) {
                     inventory = upgradeInventory;
                 } else {
                     inventory = normalInventory;
                 }
             }
 
-            inventory.put(item.getId(), new ItemProjection(item, this, item.isGolden()));
+            inventory.put(inventoryItem.getItem().getId(), new ItemProjection(inventoryItem, this, inventoryItem.isGolden()));
         }
     }
 

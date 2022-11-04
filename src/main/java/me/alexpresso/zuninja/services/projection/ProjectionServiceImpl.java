@@ -137,13 +137,6 @@ public class ProjectionServiceImpl implements ProjectionService {
             this.recursiveProjection(actions.newCycle(), state);
     }
 
-    private boolean goalFilter(final Map<String, ItemProjection> inventory, final FusionProjection projection) {
-        final var iProj = Optional.ofNullable(inventory.getOrDefault(projection.getFusion().getResult().getId(), null));
-        final var hasItem = iProj.isPresent() && iProj.get().getQuantity() > 0;
-
-        return !projection.isSolved() && !hasItem;
-    }
-
 
     private void projectDaily(final ActionList actions, final ProjectionState state) {
         final var today = LocalDate.now();
@@ -186,7 +179,6 @@ public class ProjectionServiceImpl implements ProjectionService {
         }
 
         projections.get().stream()
-            .filter(p -> this.goalFilter(inventory, p))
             .sorted(Comparator.comparingDouble(FusionProjection::getDoability)
                 .thenComparing(f -> f.getFusion().getResult().getItemIdentifier())
                 .reversed()

@@ -41,7 +41,7 @@ public class ItemProjection implements ActionElement {
 
         //On each card (golden + normal) get number of cards needed to achieve unresolved fusions
         this.countProjection.getNeededForFusions().set(item.getInputOfFusions().stream()
-            .filter(itf -> this.inventory.getQuantity(inventory, itf.getFusion().getResult()) < 1)
+            .filter(itf -> this.inventory.getQuantity(inventory, itf.getFusion().getResult()) < ItemCountProjection.NEEDED_BASE)
             .mapToInt(InputToFusion::getQuantity)
             .sum()
         );
@@ -62,6 +62,7 @@ public class ItemProjection implements ActionElement {
             this.countProjection.getNeededForUpgrades().set(Optional.ofNullable(upgradeInventory.getOrDefault(item.getId(), null))
                 .map(ItemProjection::getUpgradeLevel)
                 .orElse(item.getRarity() + 1)
+                - 1
             );
         }
     }
