@@ -50,7 +50,7 @@ public class ItemProjection implements ActionElement {
         if(!golden) {
             this.countProjection.getNeededForEnchant().set(this.inventory
                 .getCountProjection(this.inventory.getGoldenInventory(), item)
-                .getTotalNeeded()
+                .getTotalNeeded() - this.inventory.getQuantity(this.inventory.getGoldenInventory(), item)
             );
         }
 

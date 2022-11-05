@@ -262,7 +262,7 @@ public class ProjectionServiceImpl implements ProjectionService {
                 final var item = iProj.getItem();
                 final var goldenQuantity = state.getInventory().getQuantity(state.getInventory().getGoldenInventory(), item);
 
-                if(goldenQuantity >= iProj.getCountProjection().getNeededForEnchant().get())
+                if(goldenQuantity >= (iProj.getCountProjection().getNeededForEnchant().get() + ItemCountProjection.NEEDED_BASE))
                     return;
 
                 final var cost = state.getConfigFor(item.getRarity(), true).getCraftValue();
