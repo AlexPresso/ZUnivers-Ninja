@@ -2,10 +2,7 @@ package me.alexpresso.zuninja.services.event;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import me.alexpresso.zuninja.domain.nodes.event.Event;
-import me.alexpresso.zuninja.domain.nodes.item.Pack;
 import me.alexpresso.zuninja.repositories.EventRepository;
-import me.alexpresso.zuninja.repositories.PackRepository;
-import me.alexpresso.zuninja.services.item.ItemService;
 import me.alexpresso.zuninja.services.request.RequestService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

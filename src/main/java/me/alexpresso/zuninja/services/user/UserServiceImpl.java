@@ -3,7 +3,6 @@ package me.alexpresso.zuninja.services.user;
 import com.fasterxml.jackson.core.type.TypeReference;
 import me.alexpresso.zuninja.classes.activity.ActivityDetail;
 import me.alexpresso.zuninja.classes.challenge.Challenge;
-import me.alexpresso.zuninja.classes.challenge.ChallengeType;
 import me.alexpresso.zuninja.classes.item.EvolutionDetail;
 import me.alexpresso.zuninja.domain.nodes.item.Item;
 import me.alexpresso.zuninja.domain.nodes.user.User;

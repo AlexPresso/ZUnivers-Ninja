@@ -22,8 +22,7 @@ public class ProjectionSummary {
     public Map<String, Change> getChanges() {
         return this.changes;
     }
-    public ProjectionSummary put(final String name, final Change change) {
+    public void put(final String name, final Change change) {
         this.changes.put(name, change);
-        return this;
     }
 }

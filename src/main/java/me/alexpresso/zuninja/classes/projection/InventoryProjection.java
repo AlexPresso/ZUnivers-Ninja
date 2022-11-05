@@ -1,10 +1,12 @@
 package me.alexpresso.zuninja.classes.projection;
 
+import me.alexpresso.zuninja.domain.nodes.item.Item;
 import me.alexpresso.zuninja.domain.nodes.user.User;
 
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Map;
-import java.util.stream.Collectors;
+import java.util.Optional;
 
 public class InventoryProjection {
     private final Map<String, ItemProjection> normalInventory;
@@ -13,18 +15,34 @@ public class InventoryProjection {
     private final Map<String, ItemProjection> upgradeGoldenInventory;
 
     public InventoryProjection(final User user) {
-        this.normalInventory = user.getInventory().stream()
-            .filter(i -> !i.isGolden() && !i.isUpgrade())
-            .collect(Collectors.toMap(iv -> iv.getItem().getId(), ItemProjection::new));
-        this.goldenInventory = user.getInventory().stream()
-            .filter(i -> i.isGolden() && !i.isUpgrade())
-            .collect(Collectors.toMap(iv -> iv.getItem().getId(), ItemProjection::new));
-        this.upgradeInventory = user.getInventory().stream()
-            .filter(i -> i.isUpgrade() && !i.isGolden())
-            .collect(Collectors.toMap(iv -> iv.getItem().getId(), ItemProjection::new));
-        this.upgradeGoldenInventory = user.getInventory().stream()
-            .filter(i -> i.isUpgrade() && i.isGolden())
-            .collect(Collectors.toMap(iv -> iv.getItem().getId(), ItemProjection::new));
+        this.normalInventory = new HashMap<>();
+        this.goldenInventory = new HashMap<>();
+        this.upgradeInventory = new HashMap<>();
+        this.upgradeGoldenInventory = new HashMap<>();
+
+        this.init(user);
+    }
+
+    private void init(final User user) {
+        for(final var inventoryItem : user.getInventory()) {
+            final Map<String, ItemProjection> inventory;
+
+            if(inventoryItem.isGolden()) {
+                if(inventoryItem.isUpgrade()) {
+                    inventory = upgradeGoldenInventory;
+                } else {
+                    inventory = goldenInventory;
+                }
+            } else {
+                if(inventoryItem.isUpgrade()) {
+                    inventory = upgradeInventory;
+                } else {
+                    inventory = normalInventory;
+                }
+            }
+
+            inventory.put(inventoryItem.getItem().getId(), new ItemProjection(inventoryItem, this, inventoryItem.isGolden()));
+        }
     }
 
     public Map<String, ItemProjection> getNormalInventory() {
@@ -63,5 +81,28 @@ public class InventoryProjection {
         return projections.stream()
             .filter(p -> p.getQuantity() > 0)
             .count();
+    }
+
+    public int getQuantity(final Map<String, ItemProjection> inventory, final Item item) {
+        return Optional.ofNullable(inventory.getOrDefault(item.getId(), null))
+            .map(ItemProjection::getQuantity)
+            .orElse(0);
+    }
+
+    /**
+     * get ItemCountProjection instance
+     * <p>
+     * Note: if the item is not in the specified inventory, it will return a new default instance (with NEEDED_BASE > 0)
+     * because the ItemProjection will be created later in the projection (with a null ItemCountProjection), it will
+     * later be initialized and calculted with the right values of needed amounts.
+     * </p>
+     * @param inventory inventory
+     * @param item item
+     * @return ItemCountProjection
+     */
+    public ItemCountProjection getCountProjection(final Map<String, ItemProjection> inventory, final Item item) {
+        return Optional.ofNullable(inventory.getOrDefault(item.getId(), null))
+            .map(ItemProjection::getCountProjection)
+            .orElse(new ItemCountProjection());
     }
 }

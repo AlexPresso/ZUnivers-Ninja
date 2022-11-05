@@ -13,8 +13,4 @@ public class BaseCustomException extends Exception {
         super(message);
         this.errors = errors;
     }
-
-    public Object getErrors() {
-        return this.errors;
-    }
 }
