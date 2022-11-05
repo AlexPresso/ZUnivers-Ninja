@@ -5,7 +5,6 @@ import org.springframework.data.neo4j.repository.Neo4jRepository;
 import org.springframework.data.neo4j.repository.query.Query;
 
 import java.time.LocalDateTime;
-import java.util.Optional;
 import java.util.Set;
 
 public interface EventRepository extends Neo4jRepository<Event, Long> {

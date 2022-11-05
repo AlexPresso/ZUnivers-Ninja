@@ -21,13 +21,11 @@ public class MemoryCache {
         return this.getOrDefault(DEFAULT_CACHE_KEY, key, defValue);
     }
 
-    public MemoryCache put(final String discordTag, final CacheEntry key, final Object value) {
+    public void put(final String discordTag, final CacheEntry key, final Object value) {
         this.cache.computeIfAbsent(discordTag, k -> new HashMap<>());
         this.cache.get(discordTag).put(key, value);
-        return this;
     }
-    public MemoryCache put(final CacheEntry key, final Object value) {
+    public void put(final CacheEntry key, final Object value) {
         this.put(DEFAULT_CACHE_KEY, key, value);
-        return this;
     }
 }

@@ -13,9 +13,8 @@ public class ItemEvolutionDetail {
     public boolean isOwned() {
         return this.owned;
     }
-    public ItemEvolutionDetail setOwned(final boolean owned) {
+    public void setOwned(final boolean owned) {
         this.owned = owned;
-        return this;
     }
 
     public Item getItem() {
