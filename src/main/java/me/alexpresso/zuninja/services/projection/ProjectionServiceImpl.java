@@ -77,6 +77,7 @@ public class ProjectionServiceImpl implements ProjectionService {
             .orElseThrow(() -> new NodeNotFoundException("This user doesn't exist."));
 
         final var activeEvents = this.eventRepository.findEventsAtDate(LocalDateTime.now());
+        final var allFusions = this.fusionRepository.findAll();
         final var allItems = this.itemRepository.findAll();
         final var config = this.configService.fetchConfiguration();
         final var dailyMap = this.userService.fetchLootActivity(discordTag);
@@ -96,6 +97,7 @@ public class ProjectionServiceImpl implements ProjectionService {
             user,
             activeEvents,
             vortexStats,
+            allFusions,
             allItems,
             config,
             challenges,
@@ -168,26 +170,24 @@ public class ProjectionServiceImpl implements ProjectionService {
     }
 
     private void projectFusions(final ActionList actions, final ProjectionState state, final boolean golden) {
-        final var projections = golden ? state.getGoldenFusions() : state.getNormalFusions();
-        final var inventory = golden ? state.getInventory().getGoldenInventory() : state.getInventory().getNormalInventory();
+        final var inventory = golden ?
+            state.getInventory().getGoldenInventory() :
+            state.getInventory().getNormalInventory();
 
-        if(projections.get() == null) {
-            final var p =  this.fusionRepository.findAll().stream()
-                .map(f -> new FusionProjection(f, golden, inventory)).collect(Collectors.toSet());
-
-            projections.set(p);
-        }
-
-        projections.get().stream()
-            .sorted(Comparator.comparingDouble(FusionProjection::getDoability)
-                .thenComparing(f -> f.getFusion().getResult().getItemIdentifier())
-                .reversed()
-            ).forEach(p -> {
-                if(p.getDoability() >= 100)
-                    this.solvedFusion(actions, p, state);
-                else
-                    this.tryFillMissing(actions, p, state);
-            });
+        state.getAllFusions().stream().filter(f ->
+            state.getInventory().getQuantity(inventory, f.getResult())
+            <
+            state.getInventory().getCountProjection(inventory, f.getResult()).getTotalNeeded()
+        ).map(f -> new FusionProjection(f, golden, inventory))
+        .sorted(Comparator.comparingDouble(FusionProjection::getDoability)
+            .thenComparing(f -> f.getFusion().getResult().getItemIdentifier())
+            .reversed()
+        ).forEach(p -> {
+            if(p.getDoability() >= 100)
+                this.solvedFusion(actions, p, state);
+            else
+                this.tryFillMissing(actions, p, state);
+        });
     }
 
     private void tryFillMissing(final ActionList actions, final FusionProjection projection, final ProjectionState state) {
