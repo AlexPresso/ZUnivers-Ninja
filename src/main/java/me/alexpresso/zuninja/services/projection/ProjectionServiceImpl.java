@@ -411,6 +411,9 @@ public class ProjectionServiceImpl implements ProjectionService {
         this.consumeItem(state, item, 1, golden);
     }
     private void consumeItem(final ProjectionState state, final Item item, final int quantity, final boolean golden) throws ProjectionException {
+        if(quantity < 0)
+            throw new ProjectionException("Cannot consume negative quantity...");
+
         final var inventory = golden ?
             state.getInventory().getGoldenInventory() :
             state.getInventory().getNormalInventory();
