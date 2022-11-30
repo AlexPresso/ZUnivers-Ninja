@@ -29,7 +29,6 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -77,6 +76,7 @@ public class ProjectionServiceImpl implements ProjectionService {
             .orElseThrow(() -> new NodeNotFoundException("This user doesn't exist."));
 
         final var activeEvents = this.eventRepository.findEventsAtDate(LocalDateTime.now());
+        final var allFusions = this.fusionRepository.findAll();
         final var allItems = this.itemRepository.findAll();
         final var config = this.configService.fetchConfiguration();
         final var dailyMap = this.userService.fetchLootActivity(discordTag);
@@ -96,6 +96,7 @@ public class ProjectionServiceImpl implements ProjectionService {
             user,
             activeEvents,
             vortexStats,
+            allFusions,
             allItems,
             config,
             challenges,
@@ -168,88 +169,35 @@ public class ProjectionServiceImpl implements ProjectionService {
     }
 
     private void projectFusions(final ActionList actions, final ProjectionState state, final boolean golden) {
-        final var projections = golden ? state.getGoldenFusions() : state.getNormalFusions();
-        final var inventory = golden ? state.getInventory().getGoldenInventory() : state.getInventory().getNormalInventory();
+        final var inventory = golden ?
+            state.getInventory().getGoldenInventory() :
+            state.getInventory().getNormalInventory();
 
-        if(projections.get() == null) {
-            final var p =  this.fusionRepository.findAll().stream()
-                .map(f -> new FusionProjection(f, golden, inventory)).collect(Collectors.toSet());
+        for(final var fusion : state.getAllFusions()) {
+            final var result = fusion.getResult();
 
-            projections.set(p);
-        }
+            if(state.getInventory().getQuantity(inventory, result) >= state.getInventory().getCountProjection(inventory, result).getTotalNeeded())
+                continue;
 
-        projections.get().stream()
-            .sorted(Comparator.comparingDouble(FusionProjection::getDoability)
-                .thenComparing(f -> f.getFusion().getResult().getItemIdentifier())
-                .reversed()
-            ).forEach(p -> {
-                if(p.getDoability() >= 100)
-                    this.solvedFusion(actions, p, state);
-                else
-                    this.tryFillMissing(actions, p, state);
-            });
-    }
+            final var missingInputs = fusion.getInputs().stream().anyMatch(i ->
+                state.getInventory().getQuantity(inventory, i.getItem())
+                <
+                i.getQuantity() + ItemCountProjection.NEEDED_BASE
+            );
 
-    private void tryFillMissing(final ActionList actions, final FusionProjection projection, final ProjectionState state) {
-        final var cost = new AtomicInteger(0);
-        final var craftable = new AtomicInteger(0);
-        final var money = state.getMoneyFor(projection.getFusion().getResult());
-        final var vortexPack = this.memoryCache.getOrDefault(CacheEntry.CURRENT_VORTEX_PACK, "");
-        final var totalMissing = projection.getMissingItems().values().stream()
-            .reduce(0, Integer::sum);
+            if(missingInputs)
+                continue;
 
-        projection.getMissingItems().forEach((i, q) -> {
-            cost.getAndAdd(state.getConfigFor(i.getRarity(), false).getCraftValue() * q);
-
-            if(projection.isGolden())
-                cost.getAndAdd(state.getConfigFor(i.getRarity(), true).getCraftValue() * q);
-
-            if(i.isCraftable() && (i.getPack().getId().equals(vortexPack) || i.getPack().getName().equalsIgnoreCase("classique")))
-                craftable.incrementAndGet();
-        });
-
-        if(money.get() > cost.get() && craftable.get() == totalMissing) {
-            projection.getMissingItems().forEach((i, q) -> {
-                this.produceItem(state, i, q, projection.isGolden());
-
-                this.addAction(state, actions, ActionType.CRAFT, i, q);
-                if(projection.isGolden()) {
-                    this.addAction(state, actions, ActionType.ENCHANT, i, q);
+            try {
+                for(final var input : fusion.getInputs()) {
+                    this.consumeItem(state, input.getItem(), input.getQuantity(), golden);
                 }
-            });
 
-            money.getAndAdd(-cost.get());
-        }
-    }
-
-    private void solvedFusion(final ActionList actions, final FusionProjection projection, final ProjectionState state) {
-        try {
-            final var toConsume = new HashMap<ItemProjection, Integer>(); //<Item, quantity>
-            for(var input : projection.getFusion().getInputs()) {
-                if(!projection.getSharedInventory().containsKey(input.getItem().getId()))
-                    throw new ProjectionException("No no no, you have no inventory entry for that item.");
-
-                final var iProj = projection.getSharedInventory().get(input.getItem().getId());
-                final var quantity = iProj.getQuantity() - 1;
-
-                if(quantity < input.getQuantity())
-                    throw new ProjectionException("Not enough available items.");
-
-                toConsume.put(iProj, input.getQuantity());
+                this.produceItem(state, fusion.getResult(), golden);
+                actions.addElement(ActionType.FUSION, new RecycleElement(fusion.getResult(), golden), 1);
+            } catch (ProjectionException e) {
+                logger.error(e.getMessage());
             }
-
-            for(var e : toConsume.entrySet()) {
-                this.consumeItem(state, e.getKey().getItem(), e.getValue(), projection.isGolden());
-            }
-
-            this.produceItem(state, projection.getFusion().getResult(), 1, projection.isGolden());
-
-            projection.setSolved(true);
-            this.addAction(state, actions, ActionType.FUSION, projection, 1);
-
-            logger.debug("Solved fusion {}", projection.getIdentifier());
-        } catch (ProjectionException e) {
-            logger.debug("Cannot consume inputs, a previous fusion may already have consumed one of these.");
         }
     }
 
@@ -463,6 +411,9 @@ public class ProjectionServiceImpl implements ProjectionService {
         this.consumeItem(state, item, 1, golden);
     }
     private void consumeItem(final ProjectionState state, final Item item, final int quantity, final boolean golden) throws ProjectionException {
+        if(quantity < 0)
+            throw new ProjectionException("Cannot consume negative quantity...");
+
         final var inventory = golden ?
             state.getInventory().getGoldenInventory() :
             state.getInventory().getNormalInventory();

@@ -6,6 +6,7 @@ import me.alexpresso.zuninja.classes.config.ConfigPart;
 import me.alexpresso.zuninja.classes.item.EvolutionDetail;
 import me.alexpresso.zuninja.classes.vortex.VortexStats;
 import me.alexpresso.zuninja.domain.nodes.event.Event;
+import me.alexpresso.zuninja.domain.nodes.item.Fusion;
 import me.alexpresso.zuninja.domain.nodes.item.Item;
 import me.alexpresso.zuninja.domain.nodes.user.User;
 
@@ -24,9 +25,8 @@ public class ProjectionState {
     private final AtomicInteger upgradeDust;
     private final VortexStats vortexStats;
     private final AtomicInteger ascensionsCount;
-    private final AtomicReference<Set<FusionProjection>> normalFusions;
-    private final AtomicReference<Set<FusionProjection>> goldenFusions;
     private final Set<Event> activeEvents;
+    private final List<Fusion> allFusions;
     private final List<Item> allItems;
     private final Config config;
     private final AtomicBoolean subscribed;
@@ -39,6 +39,7 @@ public class ProjectionState {
                            final User user,
                            final Set<Event> activeEvents,
                            final VortexStats vortexStats,
+                           final List<Fusion> allFusions,
                            final List<Item> allItems,
                            final Config config,
                            final Set<Challenge> challenges,
@@ -52,9 +53,8 @@ public class ProjectionState {
         this.upgradeDust = new AtomicInteger(user.getUpgradeDust());
         this.vortexStats = vortexStats;
         this.ascensionsCount = new AtomicInteger(vortexStats != null ? vortexStats.getLogCount() : 0);
-        this.normalFusions = new AtomicReference<>(null);
-        this.goldenFusions = new AtomicReference<>(null);
         this.activeEvents = activeEvents;
+        this.allFusions = allFusions;
         this.allItems = allItems;
         this.config = config;
         this.subscribed = new AtomicBoolean(user.getStatistics().isSubscribed());
@@ -95,16 +95,12 @@ public class ProjectionState {
         return this.ascensionsCount;
     }
 
-    public AtomicReference<Set<FusionProjection>> getNormalFusions() {
-        return this.normalFusions;
-    }
-
-    public AtomicReference<Set<FusionProjection>> getGoldenFusions() {
-        return this.goldenFusions;
-    }
-
     public Set<Event> getActiveEvents() {
         return this.activeEvents;
+    }
+
+    public List<Fusion> getAllFusions() {
+        return this.allFusions;
     }
 
     public List<Item> getAllItems() {
