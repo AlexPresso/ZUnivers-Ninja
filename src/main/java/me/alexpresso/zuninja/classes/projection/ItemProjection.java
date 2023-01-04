@@ -52,6 +52,9 @@ public class ItemProjection implements ActionElement {
                 .getCountProjection(this.inventory.getGoldenInventory(), item)
                 .getTotalNeeded() - this.inventory.getQuantity(this.inventory.getGoldenInventory(), item)
             );
+
+            if(this.countProjection.getNeededForEnchant().get() < 0)
+                this.countProjection.getNeededForEnchant().set(0);
         }
 
         if(item.isUpgradable()) {

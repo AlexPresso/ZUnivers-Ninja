@@ -20,9 +20,6 @@ public class ItemCountProjection {
         this.neededForEnchant = new AtomicInteger(neededForEnchant);
     }
 
-    public int getNeededBase() {
-        return NEEDED_BASE;
-    }
 
     public AtomicInteger getNeededForUpgrades() {
         return this.neededForUpgrades;
