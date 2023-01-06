@@ -144,28 +144,28 @@ public class ProjectionServiceImpl implements ProjectionService {
         final var format = DateTimeFormatter.ofPattern("yyyy-MM-dd");
         var todayDaily = state.getDailyMap().getOrDefault(today.format(format), 0);
 
-        if(todayDaily > 1)
-            return;
-
         if(todayDaily == 0) {
             this.addAction(state, actions, ActionType.DAILY, null);
             state.getBalance().getAndAdd(DAILY_REWARD);
-            state.getDailyMap().put(today.format(format), ++todayDaily);
+            todayDaily += 1000;
+            state.getDailyMap().put(today.format(format), todayDaily);
         }
 
-        var prev = today;
-        for(int i = 0; i < 7; i++) {
-            final var claimed = state.getDailyMap().getOrDefault(prev.format(format), 0);
+        var consecutives = 0;
+        for(final var daily : state.getDailyMap().entrySet()) {
+            if(daily.getValue() == 1000)
+                consecutives++;
 
-            if(claimed == 0 || claimed > 1)
-                return;
-
-            prev = prev.minusDays(1);
+            if(daily.getValue() > 1000)
+                break;
         }
+
+        if(consecutives < 7)
+            return;
 
         this.addAction(state, actions, ActionType.WEEKLY, null);
         state.getBalance().getAndAdd(DAILY_REWARD);
-        state.getDailyMap().put(today.format(format), ++todayDaily);
+        state.getDailyMap().put(today.format(format), todayDaily + 1000);
     }
 
     private void projectFusions(final ActionList actions, final ProjectionState state, final boolean golden) {
