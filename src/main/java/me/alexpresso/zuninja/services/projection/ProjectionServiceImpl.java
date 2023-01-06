@@ -3,6 +3,8 @@ package me.alexpresso.zuninja.services.projection;
 import me.alexpresso.zuninja.classes.cache.CacheEntry;
 import me.alexpresso.zuninja.classes.cache.MemoryCache;
 import me.alexpresso.zuninja.classes.challenge.Challenge;
+import me.alexpresso.zuninja.classes.config.Cost;
+import me.alexpresso.zuninja.classes.config.Reward;
 import me.alexpresso.zuninja.classes.item.ItemEvolutionDetail;
 import me.alexpresso.zuninja.classes.projection.*;
 import me.alexpresso.zuninja.classes.projection.action.*;
@@ -45,11 +47,8 @@ public class ProjectionServiceImpl implements ProjectionService {
     private final VortexService vortexService;
     private final MemoryCache memoryCache;
 
-    private final static int ASCENSION_COST = 20;
     private final static int VORTEX_MAX = 6;
-    private final static int INVOCATION_COST = 1000;
     private final static int PER_DAY_ASCENSIONS = 2;
-    private final static int DAILY_REWARD = 1200;
 
 
     public ProjectionServiceImpl(final FusionRepository fr,
@@ -146,17 +145,17 @@ public class ProjectionServiceImpl implements ProjectionService {
 
         if(todayDaily == 0) {
             this.addAction(state, actions, ActionType.DAILY, null);
-            state.getBalance().getAndAdd(DAILY_REWARD);
-            todayDaily += 1000;
+            state.getBalance().getAndAdd(Reward.DAILY.getValue());
+            todayDaily += Reward.DAILY.getValue();
             state.getDailyMap().put(today.format(format), todayDaily);
         }
 
         var consecutives = 0;
         for(final var daily : state.getDailyMap().entrySet()) {
-            if(daily.getValue() == 1000)
+            if(daily.getValue() == Reward.DAILY.getValue() || daily.getValue() == Reward.DAILY_SUB.getValue())
                 consecutives++;
 
-            if(daily.getValue() > 1000)
+            if(daily.getValue() >= (2 * Reward.DAILY.getValue()))
                 break;
         }
 
@@ -164,8 +163,8 @@ public class ProjectionServiceImpl implements ProjectionService {
             return;
 
         this.addAction(state, actions, ActionType.WEEKLY, null);
-        state.getBalance().getAndAdd(DAILY_REWARD);
-        state.getDailyMap().put(today.format(format), todayDaily + 1000);
+        state.getBalance().getAndAdd(Reward.DAILY.getValue());
+        state.getDailyMap().put(today.format(format), todayDaily + Reward.DAILY.getValue());
     }
 
     private void projectFusions(final ActionList actions, final ProjectionState state, final boolean golden) {
@@ -257,9 +256,9 @@ public class ProjectionServiceImpl implements ProjectionService {
                 return;
         }
 
-        if(state.getBalance().get() >= INVOCATION_COST) {
+        if(state.getBalance().get() >= Cost.INVOCATION.getValue()) {
             this.addAction(state, actions, ActionType.INVOCATION, null);
-            state.getBalance().getAndAdd(-INVOCATION_COST);
+            state.getBalance().getAndAdd(-Cost.INVOCATION.getValue());
         }
     }
 
@@ -272,11 +271,11 @@ public class ProjectionServiceImpl implements ProjectionService {
             .map(s -> (s.getTotalAchievable(now) + 1) * PER_DAY_ASCENSIONS)
             .orElse((long) PER_DAY_ASCENSIONS);
 
-        if(state.getLoreDust().get() < ASCENSION_COST || floor >= VORTEX_MAX || state.getAscensionsCount().get() >= totalAchievable)
+        if(state.getLoreDust().get() < Cost.ASCENSION.getValue() || floor >= VORTEX_MAX || state.getAscensionsCount().get() >= totalAchievable)
             return;
 
         this.addAction(state, actions, ActionType.ASCENSION, null);
-        state.getLoreDust().getAndAdd(-ASCENSION_COST);
+        state.getLoreDust().getAndAdd(-Cost.ASCENSION.getValue());
         state.getAscensionsCount().getAndIncrement();
     }
 

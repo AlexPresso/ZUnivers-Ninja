@@ -90,8 +90,10 @@ public class DispatchServiceImpl implements DispatchService {
         final var message = new WebhookMessageBuilder()
             .setContent(discordTag);
         final var embed = new WebhookEmbedBuilder()
-            .setColor(0xff3434)
-            .addField(new WebhookEmbed.EmbedField(true, "Infos", sb.toString()));
+            .setColor(0xff3434);
+
+        if(sb.toString().length() > 0)
+            embed.addField(new WebhookEmbed.EmbedField(true, "Infos", sb.toString()));
 
         if(cmds.length() < 4096) {
             embed.setDescription(String.format("Conseils :\n```\n%s```", cmds));
