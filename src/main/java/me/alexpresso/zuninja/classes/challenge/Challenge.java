@@ -10,7 +10,9 @@ public class Challenge {
     private String id;
     private ChallengeType type;
     private int rewardLoreDust;
+    @JsonProperty("progress")
     private ChallengeProgress progress;
+    @JsonProperty("challengeLog")
     private ChallengeLog challengeLog;
     private String description;
 
