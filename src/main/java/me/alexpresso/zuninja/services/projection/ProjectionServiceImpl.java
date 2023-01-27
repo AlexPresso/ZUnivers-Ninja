@@ -468,18 +468,15 @@ public class ProjectionServiceImpl implements ProjectionService {
     private int getProgress(final ProjectionState state,
                             final ActionType type,
                             final ActionElement element) {
-        switch(type) {
-            case RECYCLE:
-                return ((ActionElementList) element).stream()
-                    .map(GoldableElement.class::cast)
-                    .filter(e -> e.getItem().getPack().getName().equalsIgnoreCase("classique"))
-                    .map(e -> state.getConfigFor(e.getItem().getRarity(), e.isGolden()).getRecycleValue())
-                    .reduce(0, Integer::sum);
-            case INVOCATION:
-                return 10;
-            default:
-                return 1;
-        }
+        return switch(type) {
+            case RECYCLE -> ((ActionElementList) element).stream()
+                .map(GoldableElement.class::cast)
+                .filter(e -> e.getItem().getPack().getName().equalsIgnoreCase("classique"))
+                .map(e -> state.getConfigFor(e.getItem().getRarity(), e.isGolden()).getRecycleValue())
+                .reduce(0, Integer::sum);
+            case INVOCATION -> 10;
+            default -> 1;
+        };
     }
 
 
