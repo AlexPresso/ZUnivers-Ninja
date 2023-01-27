@@ -25,10 +25,4 @@ public class ActionList extends ArrayList<Action> {
         this.add(action);
         this.changed = true;
     }
-
-    public void addElement(final ActionType type, final ActionElement element, final int count) {
-        for(var i = 0; i < count; i++) {
-            this.addElement(new Action(type, element));
-        }
-    }
 }

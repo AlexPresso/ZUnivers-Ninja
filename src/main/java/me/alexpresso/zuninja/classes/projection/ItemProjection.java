@@ -1,6 +1,7 @@
 package me.alexpresso.zuninja.classes.projection;
 
 import me.alexpresso.zuninja.classes.projection.action.ActionElement;
+import me.alexpresso.zuninja.classes.projection.action.ActionType;
 import me.alexpresso.zuninja.domain.nodes.item.Item;
 import me.alexpresso.zuninja.domain.relations.InputToFusion;
 import me.alexpresso.zuninja.domain.relations.InventoryItem;
@@ -40,7 +41,7 @@ public class ItemProjection implements ActionElement {
             this.inventory.getNormalInventory();
 
         //On each card (golden + normal) get number of cards needed to achieve unresolved fusions
-        this.countProjection.getNeededForFusions().set(item.getInputOfFusions().stream()
+        this.countProjection.getAtomicCount(ActionType.FUSION).set(item.getInputOfFusions().stream()
             .filter(itf -> this.inventory.getQuantity(inventory, itf.getFusion().getResult()) < ItemCountProjection.NEEDED_BASE)
             .mapToInt(InputToFusion::getQuantity)
             .sum()
@@ -48,13 +49,15 @@ public class ItemProjection implements ActionElement {
 
         //Add needed normal amount to craft for golden stuff
         if(!golden) {
-            this.countProjection.getNeededForEnchant().set(this.inventory
+            final var atomicEnchant = this.countProjection.getAtomicCount(ActionType.ENCHANT);
+
+            atomicEnchant.set(this.inventory
                 .getCountProjection(this.inventory.getGoldenInventory(), item)
                 .getTotalNeeded() - this.inventory.getQuantity(this.inventory.getGoldenInventory(), item)
             );
 
-            if(this.countProjection.getNeededForEnchant().get() < 0)
-                this.countProjection.getNeededForEnchant().set(0);
+            if(atomicEnchant.get() < 0)
+                atomicEnchant.set(0);
         }
 
         if(item.isUpgradable()) {
@@ -62,7 +65,7 @@ public class ItemProjection implements ActionElement {
                 this.inventory.getUpgradeGoldenInventory() :
                 this.inventory.getUpgradeInventory();
 
-            this.countProjection.getNeededForUpgrades().set(Optional.ofNullable(upgradeInventory.getOrDefault(item.getId(), null))
+            this.countProjection.getAtomicCount(ActionType.CONSTELLATION).set(Optional.ofNullable(upgradeInventory.getOrDefault(item.getId(), null))
                 .map(ItemProjection::getUpgradeLevel)
                 .orElse(item.getRarity() + 1)
                 - 1
