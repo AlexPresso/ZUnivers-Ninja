@@ -1,14 +1,13 @@
-package me.alexpresso.zuninja.classes.projection.recycle;
+package me.alexpresso.zuninja.classes.projection.action;
 
-import me.alexpresso.zuninja.classes.projection.action.ActionElement;
 import me.alexpresso.zuninja.domain.nodes.item.Item;
 
-public class RecycleElement implements ActionElement {
+public class GoldableElement implements ActionElement {
     private final Item item;
     private final boolean golden;
 
 
-    public RecycleElement(final Item item, final boolean golden) {
+    public GoldableElement(final Item item, final boolean golden) {
         this.item = item;
         this.golden = golden;
     }

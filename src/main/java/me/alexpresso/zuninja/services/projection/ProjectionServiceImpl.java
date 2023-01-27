@@ -8,7 +8,7 @@ import me.alexpresso.zuninja.classes.config.Reward;
 import me.alexpresso.zuninja.classes.item.ItemEvolutionDetail;
 import me.alexpresso.zuninja.classes.projection.*;
 import me.alexpresso.zuninja.classes.projection.action.*;
-import me.alexpresso.zuninja.classes.projection.recycle.RecycleElement;
+import me.alexpresso.zuninja.classes.projection.action.GoldableElement;
 import me.alexpresso.zuninja.classes.projection.summary.Change;
 import me.alexpresso.zuninja.classes.vortex.VortexStats;
 import me.alexpresso.zuninja.domain.nodes.item.Item;
@@ -190,10 +190,11 @@ public class ProjectionServiceImpl implements ProjectionService {
             try {
                 for(final var input : fusion.getInputs()) {
                     this.consumeItem(state, input.getItem(), input.getQuantity(), golden);
+                    inventory.get(input.getItem().getId()).getCountProjection().updateCount(ActionType.FUSION, input.getQuantity());
                 }
 
                 this.produceItem(state, fusion.getResult(), golden);
-                actions.addElement(ActionType.FUSION, new RecycleElement(fusion.getResult(), golden), 1);
+                this.addAction(state, actions, ActionType.FUSION, new GoldableElement(fusion.getResult(), golden));
             } catch (ProjectionException e) {
                 logger.error(e.getMessage());
             }
@@ -209,7 +210,7 @@ public class ProjectionServiceImpl implements ProjectionService {
                 final var item = iProj.getItem();
                 final var goldenQuantity = state.getInventory().getQuantity(state.getInventory().getGoldenInventory(), item);
 
-                if(goldenQuantity >= (iProj.getCountProjection().getNeededForEnchant().get() + ItemCountProjection.NEEDED_BASE))
+                if(goldenQuantity >= (iProj.getCountProjection().getAtomicCount(ActionType.ENCHANT).get() + ItemCountProjection.NEEDED_BASE))
                     return;
 
                 final var cost = state.getConfigFor(item.getRarity(), true).getCraftValue();
@@ -222,9 +223,9 @@ public class ProjectionServiceImpl implements ProjectionService {
                     this.consumeItem(state, item, false);
                     this.produceItem(state, item, true);
 
-                    this.addAction(state, actions, ActionType.ENCHANT, iProj, 1);
-
+                    this.addAction(state, actions, ActionType.ENCHANT, iProj);
                     money.getAndAdd(-cost);
+                    iProj.getCountProjection().updateCount(ActionType.ENCHANT, 1);
                 } catch (ProjectionException e) {
                     logger.error(e.getMessage());
                 }
@@ -300,7 +301,7 @@ public class ProjectionServiceImpl implements ProjectionService {
 
         state.getUpgradeDust().getAndAdd(-cost);
         nextItem.setOwned(true);
-        actions.addElement(new Action(ActionType.EVOLUTION, nextItem.getItem()));
+        this.addAction(state, actions, ActionType.EVOLUTION, nextItem.getItem());
     }
 
 
@@ -348,14 +349,14 @@ public class ProjectionServiceImpl implements ProjectionService {
             try {
                 this.consumeItem(state, iProj.getItem(), count , golden);
                 money.getAndAdd(recycleValue * count);
-                toRecycle.add(new RecycleElement(iProj.getItem(), golden), count);
+                toRecycle.add(new GoldableElement(iProj.getItem(), golden), count);
             } catch (ProjectionException e) {
                 logger.error(e.getMessage());
             }
         });
 
         if(!toRecycle.isEmpty())
-            this.addAction(state, actions, ActionType.RECYCLE, toRecycle, 1);
+            this.addAction(state, actions, ActionType.RECYCLE, toRecycle);
     }
 
     private void projectUpgrades(final ActionList actions, final ProjectionState state, final boolean golden) {
@@ -379,7 +380,8 @@ public class ProjectionServiceImpl implements ProjectionService {
                     this.consumeItem(state, iProj.getItem(), golden);
                     state.getUpgradeDust().getAndIncrement();
                     upgradeProj.decreaseLevel();
-                    toUpgrade.add(new RecycleElement(iProj.getItem(), golden));
+                    toUpgrade.add(new GoldableElement(iProj.getItem(), golden));
+                    iProj.getCountProjection().updateCount(ActionType.CONSTELLATION, 1);
                 }
             } catch (ProjectionException e) {
                 logger.error(e.getMessage());
@@ -387,7 +389,7 @@ public class ProjectionServiceImpl implements ProjectionService {
         });
 
         if(!toUpgrade.isEmpty())
-            this.addAction(state, actions, ActionType.CONSTELLATION, toUpgrade, 1);
+            this.addAction(state, actions, ActionType.CONSTELLATION, toUpgrade);
     }
 
 
@@ -395,15 +397,8 @@ public class ProjectionServiceImpl implements ProjectionService {
                            final ActionList actions,
                            final ActionType type,
                            final ActionElement element) {
-        this.addAction(state, actions, type, element, 1);
-    }
-    private void addAction(final ProjectionState state,
-                           final ActionList actions,
-                           final ActionType type,
-                           final ActionElement element,
-                           final int count) {
-        actions.addElement(type, element, count);
-        this.progressChallenges(state, type, this.getProgress(state, type, element, count));
+        actions.addElement(new Action(type, element));
+        this.progressChallenges(state, type, this.getProgress(state, type, element));
     }
 
     private void consumeItem(final ProjectionState state, final Item item, final boolean golden) throws ProjectionException {
@@ -430,9 +425,6 @@ public class ProjectionServiceImpl implements ProjectionService {
 
     private void produceItem(final ProjectionState state, final Item item, final boolean golden) {
         this.produceItem(state, item, 1, golden, false);
-    }
-    private void produceItem(final ProjectionState state, final Item item, final int quantity, final boolean golden) {
-        this.produceItem(state, item, quantity, golden, false);
     }
     private ItemProjection produceItem(final ProjectionState state, final Item item, final int quantity, final boolean golden, final boolean upgradeInventory) {
         final Map<String, ItemProjection> inventory;
@@ -475,20 +467,16 @@ public class ProjectionServiceImpl implements ProjectionService {
     }
     private int getProgress(final ProjectionState state,
                             final ActionType type,
-                            final ActionElement element,
-                            final int count) {
-        switch(type) {
-            case RECYCLE:
-                return ((ActionElementList) element).stream()
-                    .map(RecycleElement.class::cast)
-                    .filter(e -> e.getItem().getPack().getName().equalsIgnoreCase("classique"))
-                    .map(e -> state.getConfigFor(e.getItem().getRarity(), e.isGolden()).getRecycleValue())
-                    .reduce(0, Integer::sum);
-            case INVOCATION:
-                return 10;
-            default:
-                return count;
-        }
+                            final ActionElement element) {
+        return switch(type) {
+            case RECYCLE -> ((ActionElementList) element).stream()
+                .map(GoldableElement.class::cast)
+                .filter(e -> e.getItem().getPack().getName().equalsIgnoreCase("classique"))
+                .map(e -> state.getConfigFor(e.getItem().getRarity(), e.isGolden()).getRecycleValue())
+                .reduce(0, Integer::sum);
+            case INVOCATION -> 10;
+            default -> 1;
+        };
     }
 
 
