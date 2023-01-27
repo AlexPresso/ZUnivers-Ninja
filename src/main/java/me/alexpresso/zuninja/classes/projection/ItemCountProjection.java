@@ -1,42 +1,41 @@
 package me.alexpresso.zuninja.classes.projection;
 
+import me.alexpresso.zuninja.classes.projection.action.ActionType;
+
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class ItemCountProjection {
     public final static int NEEDED_BASE = 1;
-    private final AtomicInteger neededForUpgrades;
-    private final AtomicInteger neededForFusions;
-    private final AtomicInteger neededForEnchant;
+    private final Map<ActionType, AtomicInteger> atomicCounts;
 
 
     public ItemCountProjection() {
-        this(0, 0, 0);
-    }
-    public ItemCountProjection(final int neededForUpgrades,
-                               final int neededForFusions,
-                               final int neededForEnchant) {
-        this.neededForUpgrades = new AtomicInteger(neededForUpgrades);
-        this.neededForFusions = new AtomicInteger(neededForFusions);
-        this.neededForEnchant = new AtomicInteger(neededForEnchant);
+        this.atomicCounts = Map.of(
+            ActionType.CONSTELLATION, new AtomicInteger(0),
+            ActionType.ENCHANT, new AtomicInteger(0),
+            ActionType.FUSION, new AtomicInteger(0)
+        );
     }
 
-
-    public AtomicInteger getNeededForUpgrades() {
-        return this.neededForUpgrades;
-    }
-
-    public AtomicInteger getNeededForFusions() {
-        return this.neededForFusions;
-    }
-
-    public AtomicInteger getNeededForEnchant() {
-        return this.neededForEnchant;
-    }
 
     public int getTotalNeeded() {
-        return this.neededForUpgrades.get() +
-            this.neededForFusions.get() +
-            this.neededForEnchant.get() +
-            NEEDED_BASE;
+        final var totalNeeded = this.atomicCounts.values().stream()
+            .map(AtomicInteger::get)
+            .reduce(0, Integer::sum);
+
+        return totalNeeded + NEEDED_BASE;
+    }
+
+    public void updateCount(final ActionType type, final int count) {
+        final var atomicCount = this.getAtomicCount(type);
+        atomicCount.getAndAdd(-count);
+
+        if(atomicCount.get() < 0)
+            atomicCount.set(0);
+    }
+
+    public AtomicInteger getAtomicCount(final ActionType type) {
+        return this.atomicCounts.getOrDefault(type, new AtomicInteger(0));
     }
 }
