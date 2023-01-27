@@ -190,7 +190,7 @@ public class ProjectionServiceImpl implements ProjectionService {
             try {
                 for(final var input : fusion.getInputs()) {
                     this.consumeItem(state, input.getItem(), input.getQuantity(), golden);
-                    inventory.get(input.getId()).getCountProjection().updateCount(ActionType.FUSION, input.getQuantity());
+                    inventory.get(input.getItem().getId()).getCountProjection().updateCount(ActionType.FUSION, input.getQuantity());
                 }
 
                 this.produceItem(state, fusion.getResult(), golden);
