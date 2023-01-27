@@ -190,10 +190,13 @@ public class ProjectionServiceImpl implements ProjectionService {
             try {
                 for(final var input : fusion.getInputs()) {
                     this.consumeItem(state, input.getItem(), input.getQuantity(), golden);
+                    inventory.get(input.getId()).getCountProjection()
+                        .getNeededForFusions()
+                        .addAndGet(-input.getQuantity());
                 }
 
                 this.produceItem(state, fusion.getResult(), golden);
-                actions.addElement(ActionType.FUSION, new RecycleElement(fusion.getResult(), golden), 1);
+                this.addAction(state, actions, ActionType.FUSION, new RecycleElement(fusion.getResult(), golden), 1);
             } catch (ProjectionException e) {
                 logger.error(e.getMessage());
             }
@@ -223,8 +226,8 @@ public class ProjectionServiceImpl implements ProjectionService {
                     this.produceItem(state, item, true);
 
                     this.addAction(state, actions, ActionType.ENCHANT, iProj, 1);
-
                     money.getAndAdd(-cost);
+                    iProj.getCountProjection().getNeededForUpgrades().addAndGet(-1);
                 } catch (ProjectionException e) {
                     logger.error(e.getMessage());
                 }
@@ -300,7 +303,7 @@ public class ProjectionServiceImpl implements ProjectionService {
 
         state.getUpgradeDust().getAndAdd(-cost);
         nextItem.setOwned(true);
-        actions.addElement(new Action(ActionType.EVOLUTION, nextItem.getItem()));
+        this.addAction(state, actions, ActionType.EVOLUTION, nextItem.getItem());
     }
 
 
@@ -380,6 +383,7 @@ public class ProjectionServiceImpl implements ProjectionService {
                     state.getUpgradeDust().getAndIncrement();
                     upgradeProj.decreaseLevel();
                     toUpgrade.add(new RecycleElement(iProj.getItem(), golden));
+                    iProj.getCountProjection().getNeededForUpgrades().addAndGet(-1);
                 }
             } catch (ProjectionException e) {
                 logger.error(e.getMessage());
