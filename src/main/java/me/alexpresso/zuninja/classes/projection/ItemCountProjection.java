@@ -29,9 +29,8 @@ public class ItemCountProjection {
 
     public void updateCount(final ActionType type, final int count) {
         final var atomicCount = this.getAtomicCount(type);
-        atomicCount.getAndAdd(-count);
 
-        if(atomicCount.get() < 0)
+        if(atomicCount.addAndGet(-count) < 0)
             atomicCount.set(0);
     }
 
