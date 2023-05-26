@@ -27,6 +27,10 @@ public class VortexServiceImpl implements VortexService {
     @Override
     public String fetchCurrentVortexPack() throws IOException, InterruptedException {
         final var vortex = (VortexDetail) this.requestService.request("/public/tower/season", "GET", new TypeReference<VortexDetail>() {});
+
+        if(vortex == null)
+            return "";
+
         return vortex.getPackId();
     }
 
