@@ -60,10 +60,12 @@ public class RequestServiceImpl implements RequestService {
             builder.POST(HttpRequest.BodyPublishers.ofString(data != null ? this.mapper.writeValueAsString(data) : ""));
         }
 
-        final String response = HttpClient.newHttpClient()
-            .send(builder.build(), HttpResponse.BodyHandlers.ofString())
-            .body();
+        final var response = HttpClient.newHttpClient()
+            .send(builder.build(), HttpResponse.BodyHandlers.ofString());
 
-        return this.mapper.readValue(response, type);
+        if(response.statusCode() == 200)
+            return this.mapper.readValue(response.body(), type);
+
+        return null;
     }
 }
