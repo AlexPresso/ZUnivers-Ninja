@@ -125,7 +125,7 @@ public class UserServiceImpl implements UserService {
     @Override
     public Map<String, Integer> fetchLootActivity(final String discordTag) throws IOException, InterruptedException {
         final var activity = (ActivityDetail) this.requestService.request(
-            String.format("/public/user/%s/activity", URLEncoder.encode(discordTag, StandardCharsets.UTF_8)),
+            String.format("/public/loot/%s?year=0", URLEncoder.encode(discordTag, StandardCharsets.UTF_8)),
             "GET",
             new TypeReference<ActivityDetail>() {}
         );
