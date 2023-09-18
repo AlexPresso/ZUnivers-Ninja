@@ -397,7 +397,22 @@ public class ProjectionServiceImpl implements ProjectionService {
                            final ActionList actions,
                            final ActionType type,
                            final ActionElement element) {
-        actions.addElement(new Action(type, element));
+        boolean mustAdd = true;
+        final var previous = actions.size() > 0 ?
+            actions.get(actions.size() - 1) :
+            null;
+
+        if(previous != null && previous.getType() == type && previous.getType().isCombinable()) {
+            if(previous.getTarget().isPresent() && previous.getTarget().get() instanceof ActionElementList) {
+                ((ActionElementList) previous.getTarget().get()).add(element);
+                mustAdd = false;
+            }
+        }
+
+        if(mustAdd) {
+            actions.addElement(new Action(type, element));
+        }
+
         this.progressChallenges(state, type, this.getProgress(state, type, element));
     }
 
