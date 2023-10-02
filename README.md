@@ -33,7 +33,7 @@ This project is not affiliated with the ZUnivers's project. It's a community pro
   - B. download the `zunivers-ninja-<version>-exec.jar` from the [package artifacts page](https://github.com/AlexPresso/ZUnivers-Ninja/packages/1071646) 
 - create a `/config` directory next to the built jar
 - create a `/config/application.yml` file ([config file example](https://github.com/AlexPresso/ZUnivers-Ninja/blob/main/src/main/resources/application.example.yml))
-- run the jar (`java -jar zunivers-ninja-<version>-SNAPSHOT-exec.jar` or `mvn spring-boot:run`)
+- run the jar (`java -jar zunivers-ninja-<version>-exec.jar` or `mvn spring-boot:run`)
 
 ## Making plugins
 The app supports plugins, by loading every jar files in a `/plugins` directory.  
