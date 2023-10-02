@@ -28,8 +28,9 @@ This project is not affiliated with the ZUnivers's project. It's a community pro
 
 ## Getting started
 - setup a Neo4J database ([docker-image](https://hub.docker.com/_/neo4j))
-- clone the repo
-- build the jar with `mvn package`
+- (choose between A or B):
+  - A. clone the repo and build the jar with `mvn package`
+  - B. download the `zunivers-ninja-<version>-exec.jar` from the [package artifacts page](https://github.com/AlexPresso/ZUnivers-Ninja/packages/1071646) 
 - create a `/config` directory next to the built jar
 - create a `/config/application.yml` file ([config file example](https://github.com/AlexPresso/ZUnivers-Ninja/blob/main/src/main/resources/application.example.yml))
 - run the jar (`java -jar zunivers-ninja-<version>-SNAPSHOT-exec.jar` or `mvn spring-boot:run`)
