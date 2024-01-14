@@ -23,8 +23,11 @@ jobs:
           java-version: '17'
           distribution: 'adopt'
 
+      - name: Set Version
+        run: mvn versions:set -DnewVersion=${{ github.ref_name }} -DgenerateBackupPoms=false
+
       - name: Publish
-        run: mvn deploy -B versions:set -DnewVersion=${{ github.ref_name }} -DgenerateBackupPoms=false
+        run: mvn deploy -B
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
