@@ -19,6 +19,9 @@ logging:
     me.alexpresso.zuninja: INFO
 
 management:
+  endpoint:
+    health:
+      show-details: always
   endpoints:
     web:
       exposure:
