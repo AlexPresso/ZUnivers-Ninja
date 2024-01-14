@@ -1,0 +1,6 @@
+/.idea
+/config
+/plugins
+
+/zuninja-plugin-example/.idea
+/zuninja-plugin-example/target
