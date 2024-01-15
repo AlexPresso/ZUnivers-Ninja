@@ -14,7 +14,7 @@ public class Config {
         this.configParts = parts.stream()
             .collect(Collectors.groupingBy(
                 ConfigPart::getRarity,
-                Collectors.toMap(p -> ShinyLevel.valueOf(p.getShinyLevel()), Function.identity())
+                Collectors.toMap(ConfigPart::getShinyLevel, Function.identity())
             ));
     }
 

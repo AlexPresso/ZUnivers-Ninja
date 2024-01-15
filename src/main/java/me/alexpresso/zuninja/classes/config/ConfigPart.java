@@ -11,7 +11,7 @@ public class ConfigPart {
     private int rarity;
     private int craftValue;
     private int recycleValue;
-    private int shinyLevel;
+    private ShinyLevel shinyLevel;
 
     public int getRarity() {
         return this.rarity;
@@ -25,7 +25,13 @@ public class ConfigPart {
         return this.recycleValue;
     }
 
-    public int getShinyLevel() {
+    public ShinyLevel getShinyLevel() {
         return this.shinyLevel;
+    }
+
+
+    @JsonProperty("shinyLevel")
+    public void unpackShinyLevel(int shinyLevel) {
+        this.shinyLevel = ShinyLevel.valueOf(shinyLevel);
     }
 }

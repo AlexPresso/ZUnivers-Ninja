@@ -294,7 +294,7 @@ public class ProjectionServiceImpl implements ProjectionService {
         if(currentItemIndex.isEmpty())
             return;
 
-        if(evolutionDetail.getItems().size() < currentItemIndex.get() + 1)
+        if(evolutionDetail.getItems().size() <= currentItemIndex.get() + 1)
             return;
 
         final var nextItem = evolutionDetail.getItems().get(currentItemIndex.get() + 1);
@@ -519,8 +519,8 @@ public class ProjectionServiceImpl implements ProjectionService {
                 summary.put(
                     String.format("%s %s", type.name(), level.name()),
                     new Change(
-                        oldInventory.getInventory(type, level),
-                        newInventory.getInventory(type, level)
+                        oldInventory.getInventoryCount(type, level),
+                        newInventory.getInventoryCount(type, level)
                     )
                 );
             }

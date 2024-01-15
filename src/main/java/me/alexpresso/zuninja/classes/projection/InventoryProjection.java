@@ -26,20 +26,19 @@ public class InventoryProjection {
                 InventoryType.UPGRADE :
                 InventoryType.CLASSIC;
 
-            inventories.computeIfAbsent(type, k -> new HashMap<>());
-            inventories.get(type).computeIfAbsent(inventoryItem.getShinyLevel(), k -> new HashMap<>());
-
-            inventories.get(type)
-                .get(inventoryItem.getShinyLevel())
-                .put(
-                    inventoryItem.getItem().getId(),
-                    new ItemProjection(inventoryItem, this, inventoryItem.getShinyLevel())
-                );
+            this.getInventory(type, inventoryItem.getShinyLevel()).put(
+                inventoryItem.getItem().getId(),
+                new ItemProjection(inventoryItem, this, inventoryItem.getShinyLevel())
+            );
         }
     }
 
     public Map<String, ItemProjection> getInventory(final InventoryType type, final ShinyLevel shinyLevel) {
-        return this.inventories.get(type)
+        this.inventories.computeIfAbsent(type, k -> new HashMap<>());
+        this.inventories.get(type).computeIfAbsent(shinyLevel, k -> new HashMap<>());
+
+        return this.inventories
+            .get(type)
             .get(shinyLevel);
     }
 

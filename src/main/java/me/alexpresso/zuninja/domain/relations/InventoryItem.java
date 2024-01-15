@@ -10,7 +10,7 @@ import org.springframework.data.neo4j.core.schema.TargetNode;
 @RelationshipProperties
 public class InventoryItem extends BaseGraphObject {
 
-    private int shinyLevel;
+    private ShinyLevel shinyLevel;
     private int upgradeLevel;
     private int quantity;
     @TargetNode
@@ -18,10 +18,10 @@ public class InventoryItem extends BaseGraphObject {
 
 
     public ShinyLevel getShinyLevel() {
-        return ShinyLevel.valueOf(this.shinyLevel);
+        return this.shinyLevel;
     }
     public InventoryItem setShinyLevel(final ShinyLevel shinyLevel) {
-        this.shinyLevel = shinyLevel.getValue();
+        this.shinyLevel = shinyLevel;
         return this;
     }
 
@@ -50,5 +50,11 @@ public class InventoryItem extends BaseGraphObject {
     public InventoryItem setItem(Item item) {
         this.item = item;
         return this;
+    }
+
+
+    @JsonProperty("shinyLevel")
+    public void unpackShinyLevel(int shinyLevel) {
+        this.shinyLevel = ShinyLevel.valueOf(shinyLevel);
     }
 }

@@ -62,8 +62,8 @@ public class TaskManager {
 
             if(this.runAutomatedTasks)
                 this.taskExecutorService.runTasks(summary.getActions().stream()
-                        .filter(a -> a.getRunnable().isPresent())
-                        .collect(Collectors.toSet())
+                    .filter(a -> a.getRunnable().isPresent())
+                    .collect(Collectors.toSet())
                 );
         }
     }
