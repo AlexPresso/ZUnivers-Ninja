@@ -517,7 +517,7 @@ public class ProjectionServiceImpl implements ProjectionService {
         for(final var type : InventoryType.values()) {
             for(final var level : ShinyLevel.values()) {
                 summary.put(
-                    String.format("%s %s", type.name(), level.name()),
+                    String.format("%s %s", type.getDisplayName(), level.getDisplayName()),
                     new Change(
                         oldInventory.getInventoryCount(type, level),
                         newInventory.getInventoryCount(type, level)
