@@ -3,13 +3,15 @@ package me.alexpresso.zuninja.classes.config;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.util.Arrays;
+import java.util.Optional;
+
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class ConfigPart {
     private int rarity;
     private int craftValue;
     private int recycleValue;
-    @JsonProperty("isGolden")
-    private boolean golden;
+    private int shinyLevel;
 
     public int getRarity() {
         return this.rarity;
@@ -23,7 +25,7 @@ public class ConfigPart {
         return this.recycleValue;
     }
 
-    public boolean isGolden() {
-        return this.golden;
+    public int getShinyLevel() {
+        return this.shinyLevel;
     }
 }

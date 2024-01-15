@@ -103,7 +103,7 @@ public class UserServiceImpl implements UserService {
 
         inventory.forEach(in -> newUser.getInventory().add(in
             .setQuantity(in.getQuantity())
-            .setGolden(in.isGolden())
+            .setShinyLevel(in.getShinyLevel())
             .setUpgradeLevel(in.getUpgradeLevel())
             .setItem(items.get(in.getItem().getId()))
         ));

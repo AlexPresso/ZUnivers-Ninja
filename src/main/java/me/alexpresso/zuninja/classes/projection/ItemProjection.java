@@ -1,5 +1,7 @@
 package me.alexpresso.zuninja.classes.projection;
 
+import me.alexpresso.zuninja.classes.config.ShinyLevel;
+import me.alexpresso.zuninja.classes.item.InventoryType;
 import me.alexpresso.zuninja.classes.projection.action.ActionElement;
 import me.alexpresso.zuninja.classes.projection.action.ActionType;
 import me.alexpresso.zuninja.domain.nodes.item.Item;
@@ -13,32 +15,29 @@ public class ItemProjection implements ActionElement {
     private int quantity;
     private int upgradeLevel;
     private final InventoryProjection inventory;
-    private final boolean golden;
+    private final ShinyLevel shinyLevel;
     private ItemCountProjection countProjection;
 
 
-    public ItemProjection(final InventoryItem iv, final InventoryProjection inventory, final boolean golden) {
-        this(iv.getItem(), iv.getQuantity(), iv.getUpgradeLevel(), inventory, golden);
+    public ItemProjection(final InventoryItem iv, final InventoryProjection inventory, final ShinyLevel shinyLevel) {
+        this(iv.getItem(), iv.getQuantity(), iv.getUpgradeLevel(), inventory, shinyLevel);
     }
     public ItemProjection(final Item item,
                           final int quantity,
                           final int upgradeLevel,
                           final InventoryProjection inventory,
-                          final boolean golden) {
+                          final ShinyLevel shinyLevel) {
         this.item = item;
         this.quantity = quantity;
         this.upgradeLevel = upgradeLevel;
         this.inventory = inventory;
-        this.golden = golden;
+        this.shinyLevel = shinyLevel;
 
     }
 
     private void initCountProjection() {
         this.countProjection = new ItemCountProjection();
-
-        final var inventory = golden ?
-            this.inventory.getGoldenInventory() :
-            this.inventory.getNormalInventory();
+        final var inventory = this.inventory.getInventory(InventoryType.CLASSIC, this.shinyLevel);
 
         //On each card (golden + normal) get number of cards needed to achieve unresolved fusions
         this.countProjection.getAtomicCount(ActionType.FUSION).set(item.getInputOfFusions().stream()
@@ -48,12 +47,13 @@ public class ItemProjection implements ActionElement {
         );
 
         //Add needed normal amount to craft for golden stuff
-        if(!golden) {
+        if(this.shinyLevel == ShinyLevel.NORMAL) {
             final var atomicEnchant = this.countProjection.getAtomicCount(ActionType.ENCHANT);
+            final var goldenInventory = this.inventory.getInventory(InventoryType.CLASSIC, ShinyLevel.GOLDEN);
 
             atomicEnchant.set(this.inventory
-                .getCountProjection(this.inventory.getGoldenInventory(), item)
-                .getTotalNeeded() - this.inventory.getQuantity(this.inventory.getGoldenInventory(), item)
+                .getCountProjection(goldenInventory, item)
+                .getTotalNeeded() - this.inventory.getQuantity(goldenInventory, item)
             );
 
             if(atomicEnchant.get() < 0)
@@ -61,9 +61,7 @@ public class ItemProjection implements ActionElement {
         }
 
         if(item.isUpgradable()) {
-            final var upgradeInventory = golden ?
-                this.inventory.getUpgradeGoldenInventory() :
-                this.inventory.getUpgradeInventory();
+            final var upgradeInventory = this.inventory.getInventory(InventoryType.UPGRADE, this.shinyLevel);
 
             this.countProjection.getAtomicCount(ActionType.CONSTELLATION).set(Optional.ofNullable(upgradeInventory.getOrDefault(item.getId(), null))
                 .map(ItemProjection::getUpgradeLevel)
