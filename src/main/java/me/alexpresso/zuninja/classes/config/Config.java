@@ -7,19 +7,19 @@ import java.util.stream.Collectors;
 
 public class Config {
 
-    private final Map<Integer, Map<Boolean, ConfigPart>> configParts;
+    private final Map<Integer, Map<ShinyLevel, ConfigPart>> configParts;
 
 
     public Config(final Set<ConfigPart> parts) {
         this.configParts = parts.stream()
             .collect(Collectors.groupingBy(
                 ConfigPart::getRarity,
-                Collectors.toMap(ConfigPart::isGolden, Function.identity())
+                Collectors.toMap(p -> ShinyLevel.valueOf(p.getShinyLevel()), Function.identity())
             ));
     }
 
 
-    public Map<Integer, Map<Boolean, ConfigPart>> getConfigParts() {
+    public Map<Integer, Map<ShinyLevel, ConfigPart>> getConfigParts() {
         return this.configParts;
     }
 }

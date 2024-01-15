@@ -1,6 +1,7 @@
 package me.alexpresso.zuninja.domain.relations;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import me.alexpresso.zuninja.classes.config.ShinyLevel;
 import me.alexpresso.zuninja.domain.base.BaseGraphObject;
 import me.alexpresso.zuninja.domain.nodes.item.Item;
 import org.springframework.data.neo4j.core.schema.RelationshipProperties;
@@ -8,19 +9,19 @@ import org.springframework.data.neo4j.core.schema.TargetNode;
 
 @RelationshipProperties
 public class InventoryItem extends BaseGraphObject {
-    @JsonProperty("isGolden")
-    private boolean golden;
+
+    private int shinyLevel;
     private int upgradeLevel;
     private int quantity;
     @TargetNode
     private Item item;
 
 
-    public boolean isGolden() {
-        return golden;
+    public ShinyLevel getShinyLevel() {
+        return ShinyLevel.valueOf(this.shinyLevel);
     }
-    public InventoryItem setGolden(boolean golden) {
-        this.golden = golden;
+    public InventoryItem setShinyLevel(final ShinyLevel shinyLevel) {
+        this.shinyLevel = shinyLevel.getValue();
         return this;
     }
 

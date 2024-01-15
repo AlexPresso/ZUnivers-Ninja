@@ -3,6 +3,7 @@ package me.alexpresso.zuninja.classes.projection;
 import me.alexpresso.zuninja.classes.challenge.Challenge;
 import me.alexpresso.zuninja.classes.config.Config;
 import me.alexpresso.zuninja.classes.config.ConfigPart;
+import me.alexpresso.zuninja.classes.config.ShinyLevel;
 import me.alexpresso.zuninja.classes.item.EvolutionDetail;
 import me.alexpresso.zuninja.classes.vortex.VortexStats;
 import me.alexpresso.zuninja.domain.nodes.event.Event;
@@ -13,7 +14,6 @@ import me.alexpresso.zuninja.domain.nodes.user.User;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
 
 public class ProjectionState {
 
@@ -67,7 +67,7 @@ public class ProjectionState {
         return this.discordTag;
     }
 
-    public InventoryProjection getInventory() {
+    public InventoryProjection getInventoryProjection() {
         return this.inventory;
     }
 
@@ -107,9 +107,9 @@ public class ProjectionState {
         return this.allItems;
     }
 
-    public ConfigPart getConfigFor(final int rarity, final boolean golden) {
+    public ConfigPart getConfigFor(final int rarity, final ShinyLevel shinyLevel) {
         return this.config.getConfigParts().get(rarity)
-            .get(golden);
+            .get(shinyLevel);
     }
 
     public AtomicBoolean getSubscribed() {
