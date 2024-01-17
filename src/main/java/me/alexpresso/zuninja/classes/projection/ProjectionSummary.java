@@ -2,13 +2,15 @@ package me.alexpresso.zuninja.classes.projection;
 
 import me.alexpresso.zuninja.classes.projection.summary.Change;
 import me.alexpresso.zuninja.classes.projection.action.ActionList;
+import me.alexpresso.zuninja.classes.projection.summary.SummaryElement;
+import me.alexpresso.zuninja.classes.projection.summary.SummaryType;
 
 import java.util.HashMap;
 import java.util.Map;
 
 public class ProjectionSummary {
     private final ActionList actions;
-    private final Map<String, Change> changes;
+    private final Map<SummaryElement, Change> changes;
 
     public ProjectionSummary(final ActionList actions) {
         this.actions = actions;
@@ -19,10 +21,31 @@ public class ProjectionSummary {
         return this.actions;
     }
 
-    public Map<String, Change> getChanges() {
+    public Map<SummaryElement, Change> getChanges() {
         return this.changes;
     }
-    public void put(final String name, final Change change) {
-        this.changes.put(name, change);
+
+    public void put(final SummaryElement element, final Change change) {
+        if(change.getBefore().equals(change.getAfter()))
+            return;
+
+        this.changes.put(element, change);
+    }
+
+    public void put(final SummaryType type, final String name, final Change change) {
+        final var element = new SummaryElement() {
+
+            @Override
+            public String getDisplayName() {
+                return name;
+            }
+
+            @Override
+            public SummaryType getSummaryType() {
+                return type;
+            }
+        };
+
+        this.put(element, change);
     }
 }

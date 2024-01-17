@@ -1,18 +1,17 @@
 package me.alexpresso.zuninja.classes.projection;
 
 import me.alexpresso.zuninja.classes.config.ShinyLevel;
+import me.alexpresso.zuninja.classes.item.Inventory;
 import me.alexpresso.zuninja.classes.item.InventoryType;
 import me.alexpresso.zuninja.domain.nodes.item.Item;
 import me.alexpresso.zuninja.domain.nodes.user.User;
 
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class InventoryProjection {
 
-    private final Map<InventoryType, Map<ShinyLevel, Map<String, ItemProjection>>> inventories;
+    private final Map<InventoryType, Map<ShinyLevel, Inventory>> inventories;
 
     public InventoryProjection(final User user) {
         this.inventories = new HashMap<>();
@@ -33,9 +32,15 @@ public class InventoryProjection {
         }
     }
 
-    public Map<String, ItemProjection> getInventory(final InventoryType type, final ShinyLevel shinyLevel) {
+    public Set<Inventory> getAllInventories() {
+        return this.inventories.values().stream()
+            .flatMap(m -> m.values().stream())
+            .collect(Collectors.toSet());
+    }
+
+    public Inventory getInventory(final InventoryType type, final ShinyLevel shinyLevel) {
         this.inventories.computeIfAbsent(type, k -> new HashMap<>());
-        this.inventories.get(type).computeIfAbsent(shinyLevel, k -> new HashMap<>());
+        this.inventories.get(type).computeIfAbsent(shinyLevel, k -> new Inventory(type, shinyLevel));
 
         return this.inventories
             .get(type)
@@ -46,7 +51,7 @@ public class InventoryProjection {
         return this.getCount(this.getInventory(type, shinyLevel).values());
     }
 
-    private long getCount(final Collection<ItemProjection> projections) {
+    public long getCount(final Collection<ItemProjection> projections) {
         return projections.stream()
             .filter(p -> p.getQuantity() > 0)
             .count();

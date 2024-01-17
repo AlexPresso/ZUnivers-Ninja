@@ -12,6 +12,8 @@ import me.alexpresso.zuninja.classes.projection.*;
 import me.alexpresso.zuninja.classes.projection.action.*;
 import me.alexpresso.zuninja.classes.projection.action.ShinyElement;
 import me.alexpresso.zuninja.classes.projection.summary.Change;
+import me.alexpresso.zuninja.classes.projection.summary.SummaryElement;
+import me.alexpresso.zuninja.classes.projection.summary.SummaryType;
 import me.alexpresso.zuninja.classes.vortex.VortexStats;
 import me.alexpresso.zuninja.domain.nodes.item.Item;
 import me.alexpresso.zuninja.domain.nodes.user.User;
@@ -502,7 +504,6 @@ public class ProjectionServiceImpl implements ProjectionService {
                                           final String discordTag) throws IOException, InterruptedException {
         final var summary = new ProjectionSummary(actions);
         final var oldInventory = new InventoryProjection(user);
-        final var newInventory = state.getInventoryProjection();
         final var initChallenges = this.userService.fetchUserChallenges(discordTag).stream()
             .filter(c -> c.getType().getActionType().isPresent())
             .filter(c -> c.getProgress().getCurrent() < c.getProgress().getMax())
@@ -510,35 +511,27 @@ public class ProjectionServiceImpl implements ProjectionService {
         final var stateChallenges = state.getChallenges().stream()
             .collect(Collectors.toMap(Challenge::getId, Function.identity()));
 
-        summary.put("Poudre créatrice", new Change(user.getLoreDust(), state.getLoreDust().get()));
-        summary.put("Cristaux d'histoire", new Change(user.getLoreFragment(), state.getLoreFragment().get()));
-        summary.put("Eclats d'étoile", new Change(user.getUpgradeDust(), state.getUpgradeDust().get()));
+        summary.put(SummaryType.MONEY, "Poudre créatrice", new Change(user.getLoreDust(), state.getLoreDust().get()));
+        summary.put(SummaryType.MONEY, "Cristaux d'histoire", new Change(user.getLoreFragment(), state.getLoreFragment().get()));
+        summary.put(SummaryType.MONEY, "Eclats d'étoile", new Change(user.getUpgradeDust(), state.getUpgradeDust().get()));
+        summary.put(SummaryType.MONEY, "Z Monnaie", new Change(user.getBalance(), state.getBalance().get()));
 
-        for(final var type : InventoryType.values()) {
-            for(final var level : ShinyLevel.values()) {
-                summary.put(
-                    String.format("%s %s", type.getDisplayName(), level.getDisplayName()),
-                    new Change(
-                        oldInventory.getInventoryCount(type, level),
-                        newInventory.getInventoryCount(type, level)
-                    )
-                );
-            }
-        }
-
-        summary.put("Z Monnaie", new Change(user.getBalance(), state.getBalance().get()));
-
-        initChallenges.forEach(c -> {
-            final var stateChall = stateChallenges.get(c.getId());
-
-            summary.put(
-                String.format("Challenge \"%s\"", c.getDescription()),
+        state.getInventoryProjection().getAllInventories()
+            .forEach(i -> summary.put(
+                i,
                 new Change(
-                    String.format("%s/%s", c.getProgress().getCurrent(), c.getProgress().getMax()),
-                    String.format("%s/%s", stateChall.getProgress().getCurrent(), stateChall.getProgress().getMax())
+                    oldInventory.getInventoryCount(i.getType(), i.getShinyLevel()),
+                    state.getInventoryProjection().getCount(i.values())
                 )
-            );
-        });
+            ));
+
+        initChallenges.forEach(c -> summary.put(
+            c,
+            new Change(
+                String.format("%s/%s", c.getProgress().getCurrent(), c.getProgress().getMax()),
+                String.format("%s/%s", stateChallenges.get(c.getId()).getProgress().getCurrent(), stateChallenges.get(c.getId()).getProgress().getMax())
+            )
+        ));
 
         return summary;
     }
