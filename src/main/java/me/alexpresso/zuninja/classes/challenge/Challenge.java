@@ -2,11 +2,13 @@ package me.alexpresso.zuninja.classes.challenge;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import me.alexpresso.zuninja.classes.projection.summary.SummaryElement;
+import me.alexpresso.zuninja.classes.projection.summary.SummaryType;
 
 import java.util.Map;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class Challenge {
+public class Challenge implements SummaryElement {
     private String id;
     private ChallengeType type;
     private int rewardLoreDust;
@@ -55,5 +57,15 @@ public class Challenge {
 
             return this.type;
         });
+    }
+
+    @Override
+    public String getDisplayName() {
+        return this.description;
+    }
+
+    @Override
+    public SummaryType getSummaryType() {
+        return SummaryType.CHALLENGE;
     }
 }
