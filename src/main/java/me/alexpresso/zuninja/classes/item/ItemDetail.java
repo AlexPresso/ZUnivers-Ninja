@@ -13,6 +13,7 @@ public class ItemDetail {
     private boolean invocable;
     private boolean recyclable;
     private boolean tradable;
+    private boolean goldable;
     private boolean upgradable;
 
     @JsonProperty("item")
@@ -22,6 +23,7 @@ public class ItemDetail {
         this.invocable = Boolean.parseBoolean(item.get("isInvocable").toString());
         this.recyclable = Boolean.parseBoolean(item.get("isRecyclable").toString());
         this.tradable = Boolean.parseBoolean(item.get("isTradable").toString());
+        this.goldable = Boolean.parseBoolean(item.get("isGoldable").toString());
         this.upgradable = Boolean.parseBoolean(item.get("isUpgradable").toString());
     }
 
@@ -43,6 +45,10 @@ public class ItemDetail {
 
     public boolean isTradable() {
         return tradable;
+    }
+
+    public boolean isGoldable() {
+        return goldable;
     }
 
     public boolean isUpgradable() {

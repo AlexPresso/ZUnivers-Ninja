@@ -87,8 +87,6 @@ public class UserServiceImpl implements UserService {
             .collect(Collectors.toMap(Item::getId, Function.identity()));
         final var user = this.getUser(discordTag)
             .orElseGet(() -> this.userStatsRepository.save(statistics).getUser());
-        final var userInventory = user.getInventory().stream()
-            .collect(Collectors.toMap(InventoryItem::getId, Function.identity()));
 
         user.setStatistics(user.getStatistics() == null ? statistics : user.getStatistics())
             .setLoreDust(statistics.getUser().getLoreDust())
@@ -103,7 +101,7 @@ public class UserServiceImpl implements UserService {
 
         inventory.forEach(in -> newUser.getInventory().add(in
             .setQuantity(in.getQuantity())
-            .setGolden(in.isGolden())
+            .setShinyLevel(in.getShinyLevel())
             .setUpgradeLevel(in.getUpgradeLevel())
             .setItem(items.get(in.getItem().getId()))
         ));

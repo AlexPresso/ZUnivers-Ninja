@@ -86,7 +86,7 @@ public class ItemServiceImpl implements ItemService {
                     .setInvocable(detail.isInvocable())
                     .setRecyclable(detail.isRecyclable())
                     .setTradable(detail.isTradable())
-                    .setGoldable(detail.isUpgradable())
+                    .setGoldable(detail.isGoldable())
                     .setUpgradable(detail.isUpgradable())
                 );
 
