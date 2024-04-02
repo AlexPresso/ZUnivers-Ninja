@@ -1,0 +1,26 @@
+services:
+  app:
+    image: ghcr.io/alexpresso/zunivers-ninja:latest
+    container_name: zunivers-ninja
+    volumes:
+      - ./config:/app/config
+    ports:
+      - 8088:8080
+    depends_on:
+      neo4j:
+        condition: service_healthy
+  neo4j:
+    image: neo4j:latest
+    container_name: zunivers-ninja-neo4j:4.4
+    environment:
+      - NEO4J_AUTH=neo4j/PASSWORD # change PASSWORD
+    ports:
+      - 7474:7474
+      - 7687:7687
+    volumes:
+      - ./data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "neo4j status"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
