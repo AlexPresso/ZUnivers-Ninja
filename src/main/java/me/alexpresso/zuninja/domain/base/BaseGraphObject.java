@@ -8,10 +8,10 @@ import org.springframework.data.neo4j.core.schema.GeneratedValue;
 public class BaseGraphObject {
     @Id
     @GeneratedValue
-    protected Long graphObjectId;
+    protected String graphObjectId;
     protected String id;
 
-    public Long getGraphObjectId() {
+    public String getGraphObjectId() {
         return this.graphObjectId;
     }
 

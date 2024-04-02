@@ -37,9 +37,7 @@ For Kubernetes clusters, there is a helm chart available in [helm.alexpresso.me]
 ## Docker
 - Download the `docker-compose.yml` file ([docker-compose.yml example](https://github.com/AlexPresso/ZUnivers-Ninja/blob/main/docker-compose.yml))
 - Set a Neo4J password in `docker-compose.yml` (i.e: `NEO4J_AUTH=neo4j/MyVeryStrongPassword`)
-- Create a `/config` directory next to the docker-compose file
-- Create a `/config/application.yml` file (see [config file example](https://github.com/AlexPresso/ZUnivers-Ninja/blob/main/src/main/resources/application.yml))
-- Set the Neo4J URI to `bolt://neo4j:7687` and set the password and the webhook URL in `application.yml`
+  - Don't forget to put the same password for zunivers-ninja's `NEO4J_PASSWORD`
 - (Optional) Set a Discord Webhook endpoint if you want to receive advices directly inside a Discord Channel.
 - Run `docker compose up -d`
 

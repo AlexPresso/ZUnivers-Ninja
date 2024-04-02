@@ -1,4 +1,4 @@
-FROM openjdk:17-jdk-slim
+FROM amazoncorretto:22.0.0-alpine3.19
 
 LABEL authors="alexpresso"
 
