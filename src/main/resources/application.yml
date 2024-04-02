@@ -1,18 +1,18 @@
 spring.neo4j:
-  uri: bolt://127.0.0.1:7687
+  uri: ${NEO4J_URI:bolt://127.0.0.1:7687}
   authentication:
-    username: neo4j
-    password: changeme
+    username: ${NEO4J_USERNAME:neo4j}
+    password: ${NEO4J_PASSWORD:changeme}
 
 toolkit:
-  discordTags: alexpresso
-  runAutomatedTasks: false
+  discordTags: ${DISCORD_TAGS:alexpresso}
+  runAutomatedTasks: ${RUN_AUTOMATED_TASKS:false}
 
 zunivers:
-  apiBaseUrl: zunivers-api.zerator.com
-  frontBaseUrl: zunivers.zerator.com
+  apiBaseUrl: ${API_BASE_URL:zunivers-api.zerator.com}
+  frontBaseUrl: ${FRONT_BASE_URL:zunivers.zerator.com}
 
-webhookUrl: #Use your own
+webhookUrl: ${WEBHOOK_URL} #Use your own
 
 logging:
   level:
