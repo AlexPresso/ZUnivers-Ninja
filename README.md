@@ -26,21 +26,31 @@ This project is not affiliated with the ZUnivers's project. It's a community pro
 - (Soon) auto subscription based on a rentability check
 
 
-## Getting started
-- setup a Neo4J database ([docker-image](https://hub.docker.com/_/neo4j))
-- (choose between A or B):
-  - A. clone the repo and build the jar with `mvn package`
-  - B. download the `zunivers-ninja-<version>-exec.jar` from the [package artifacts page](https://github.com/AlexPresso/ZUnivers-Ninja/packages/1071646) 
-- create a `/config` directory next to the built jar
-- create a `/config/application.yml` file ([config file example](https://github.com/AlexPresso/ZUnivers-Ninja/blob/main/src/main/resources/application.yml))
-- run the jar (`java -jar zunivers-ninja-<version>-exec.jar` or `mvn spring-boot:run`)
-## Docker Compose
+## Usage / Deployment
+- [Kubernetes](#kubernetes)
+- [Docker](#docker)
+- [Manual deployment](#manual-deployment)
+
+## Kubernetes
+For Kubernetes clusters, there is a helm chart available in [helm.alexpresso.me](https://github.com/AlexPresso/helm.alexpresso.me), see default [values.yaml file](https://github.com/AlexPresso/helm.alexpresso.me/blob/main/charts/zunivers-ninja/values.yaml)
+
+## Docker
 - Download the `docker-compose.yml` file ([docker-compose.yml example](https://github.com/AlexPresso/ZUnivers-Ninja/blob/main/docker-compose.yml))
-- Set the password in `docker-compose.yml`
+- Set a Neo4J password in `docker-compose.yml` (i.e: `NEO4J_AUTH=neo4j/MyVeryStrongPassword`)
 - Create a `/config` directory next to the docker-compose file
+- Create a `/config/application.yml` file (see [config file example](https://github.com/AlexPresso/ZUnivers-Ninja/blob/main/src/main/resources/application.yml))
+- Set the Neo4J URI to `bolt://neo4j:7687` and set the password and the webhook URL in `application.yml`
+- (Optional) Set a Discord Webhook endpoint if you want to receive advices directly inside a Discord Channel.
+- Run `docker compose up -d`
+
+## Manual deployment
+- Setup a Neo4J database ([docker-image](https://hub.docker.com/_/neo4j))
+- (Choose between A or B):
+  - A. Clone the repo and build the jar with `mvn package`
+  - B. Download the `zunivers-ninja-<version>-exec.jar` from the [package artifacts page](https://github.com/AlexPresso/ZUnivers-Ninja/packages/1071646) 
+- Create a `/config` directory next to the built jar
 - Create a `/config/application.yml` file ([config file example](https://github.com/AlexPresso/ZUnivers-Ninja/blob/main/src/main/resources/application.yml))
-- Modify the neo4j uri to `bolt://neo4j:7687` and set the password and the webhook URL in `application.yml`
-- run `docker compose up`
+- Run the app (`java -jar zunivers-ninja-<version>-exec.jar` or `mvn spring-boot:run`)
 
 ## Making plugins
 The app supports plugins, by loading every jar files in a `/plugins` directory.  
