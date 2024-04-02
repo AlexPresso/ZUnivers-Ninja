@@ -12,7 +12,7 @@ zunivers:
   apiBaseUrl: ${API_BASE_URL:zunivers-api.zerator.com}
   frontBaseUrl: ${FRONT_BASE_URL:zunivers.zerator.com}
 
-webhookUrl: ${WEBHOOK_URL} #Use your own
+webhookUrl: ${WEBHOOK_URL:} #Use your own
 
 logging:
   level:
