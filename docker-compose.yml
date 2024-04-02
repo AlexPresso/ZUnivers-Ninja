@@ -5,7 +5,7 @@ services:
     volumes:
       - ./config:/app/config
     ports:
-      - 8088:8080
+      - 8080:8080
     depends_on:
       neo4j:
         condition: service_healthy
