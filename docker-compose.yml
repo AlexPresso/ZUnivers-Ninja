@@ -4,8 +4,6 @@ services:
     container_name: zunivers-ninja
     volumes:
       - ./config:/app/config
-    ports:
-      - 8080:8080
     depends_on:
       neo4j:
         condition: service_healthy
@@ -14,9 +12,9 @@ services:
     container_name: zunivers-ninja-neo4j:4.4
     environment:
       - NEO4J_AUTH=neo4j/PASSWORD # change PASSWORD
-    ports:
-      - 7474:7474
-      - 7687:7687
+    # ports:
+    #   - 7474:7474 # Optional Db UI
+    #   - 7687:7687 # Optional Db Listen address
     volumes:
       - ./data:/data
     healthcheck:
