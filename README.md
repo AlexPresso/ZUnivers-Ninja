@@ -32,8 +32,13 @@ This project is not affiliated with the ZUnivers's project. It's a community pro
   - A. clone the repo and build the jar with `mvn package`
   - B. download the `zunivers-ninja-<version>-exec.jar` from the [package artifacts page](https://github.com/AlexPresso/ZUnivers-Ninja/packages/1071646) 
 - create a `/config` directory next to the built jar
-- create a `/config/application.yml` file ([config file example](https://github.com/AlexPresso/ZUnivers-Ninja/blob/main/src/main/resources/application.example.yml))
+- create a `/config/application.yml` file ([config file example](https://github.com/AlexPresso/ZUnivers-Ninja/blob/main/src/main/resources/application.yml))
 - run the jar (`java -jar zunivers-ninja-<version>-exec.jar` or `mvn spring-boot:run`)
+## Docker Compose
+- Download the `docker-compose.yml` file ([docker-compose.yml](https://github.com/AlexPresso/ZUnivers-Ninja/blob/main/docker-compose.yml))
+- Create a `/config` directory next to the docker-compose file
+- Create a `/config/application.yml` file ([config file example](https://github.com/AlexPresso/ZUnivers-Ninja/blob/main/src/main/resources/application.yml))
+- run `docker compose up`
 
 ## Making plugins
 The app supports plugins, by loading every jar files in a `/plugins` directory.  
