@@ -35,9 +35,10 @@ This project is not affiliated with the ZUnivers's project. It's a community pro
 - create a `/config/application.yml` file ([config file example](https://github.com/AlexPresso/ZUnivers-Ninja/blob/main/src/main/resources/application.yml))
 - run the jar (`java -jar zunivers-ninja-<version>-exec.jar` or `mvn spring-boot:run`)
 ## Docker Compose
-- Download the `docker-compose.yml` file ([docker-compose.yml](https://github.com/AlexPresso/ZUnivers-Ninja/blob/main/docker-compose.yml))
+- Download the `docker-compose.yml` file ([docker-compose.yml example](https://github.com/AlexPresso/ZUnivers-Ninja/blob/main/docker-compose.yml))
 - Create a `/config` directory next to the docker-compose file
 - Create a `/config/application.yml` file ([config file example](https://github.com/AlexPresso/ZUnivers-Ninja/blob/main/src/main/resources/application.yml))
+- Modify the neo4j uri to `bolt://neo4j:7687` and set the webhook URL in `application.yml`
 - run `docker compose up`
 
 ## Making plugins
