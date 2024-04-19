@@ -5,7 +5,6 @@ import me.alexpresso.zuninja.classes.item.InventoryType;
 import me.alexpresso.zuninja.classes.projection.action.ActionElement;
 import me.alexpresso.zuninja.classes.projection.action.ActionType;
 import me.alexpresso.zuninja.domain.nodes.item.Item;
-import me.alexpresso.zuninja.domain.relations.InputToFusion;
 import me.alexpresso.zuninja.domain.relations.InventoryItem;
 
 import java.util.Optional;
@@ -40,11 +39,27 @@ public class ItemProjection implements ActionElement {
         final var inventory = this.inventory.getInventory(InventoryType.CLASSIC, this.shinyLevel);
 
         //On each card (golden + normal) get number of cards needed to achieve unresolved fusions
-        this.countProjection.getAtomicCount(ActionType.FUSION).set(item.getInputOfFusions().stream()
-            .filter(itf -> this.inventory.getQuantity(inventory, itf.getFusion().getResult()) < ItemCountProjection.NEEDED_BASE)
-            .mapToInt(InputToFusion::getQuantity)
-            .sum()
-        );
+        var fusionQuantityToAdd = 0;
+        var fusionEnchantQuantityToAdd = 0;
+        for(final var itf : item.getInputOfFusions()) {
+            final var fusionResultOwnedQuantity = this.inventory.getQuantity(inventory, itf.getFusion().getResult());
+            final var fusionResultCountProjection = this.inventory.getCountProjection(inventory, itf.getFusion().getResult(), shinyLevel);
+
+            if(fusionResultOwnedQuantity >= fusionResultCountProjection.getTotalNeeded())
+                continue;
+
+            var normalMultiplier = fusionResultCountProjection.getAtomicCount(ActionType.CONSTELLATION).get() +
+                fusionResultCountProjection.getAtomicCount(ActionType.FUSION).get();
+
+            if(fusionResultOwnedQuantity < ItemCountProjection.NEEDED_BASE)
+                normalMultiplier += ItemCountProjection.NEEDED_BASE;
+
+            fusionQuantityToAdd += itf.getQuantity() * normalMultiplier;
+            fusionEnchantQuantityToAdd += itf.getQuantity() * fusionResultCountProjection.getAtomicCount(ActionType.ENCHANT).get();
+        }
+
+        this.countProjection.getAtomicCount(ActionType.FUSION).set(fusionQuantityToAdd);
+        this.countProjection.getAtomicCount(ActionType.ENCHANT).set(fusionEnchantQuantityToAdd);
 
         //Add needed normal amount to craft for golden stuff
         if(this.shinyLevel == ShinyLevel.NORMAL) {
@@ -52,7 +67,7 @@ public class ItemProjection implements ActionElement {
             final var goldenInventory = this.inventory.getInventory(InventoryType.CLASSIC, ShinyLevel.GOLDEN);
 
             atomicEnchant.set(this.inventory
-                .getCountProjection(goldenInventory, item)
+                .getCountProjection(goldenInventory, item, ShinyLevel.GOLDEN)
                 .getTotalNeeded() - this.inventory.getQuantity(goldenInventory, item)
             );
 

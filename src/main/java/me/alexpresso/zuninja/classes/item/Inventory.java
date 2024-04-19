@@ -5,9 +5,9 @@ import me.alexpresso.zuninja.classes.projection.ItemProjection;
 import me.alexpresso.zuninja.classes.projection.summary.SummaryElement;
 import me.alexpresso.zuninja.classes.projection.summary.SummaryType;
 
-import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
 
-public class Inventory extends HashMap<String, ItemProjection> implements SummaryElement {
+public class Inventory extends ConcurrentHashMap<String, ItemProjection> implements SummaryElement {
 
     private final InventoryType type;
     private final ShinyLevel shinyLevel;

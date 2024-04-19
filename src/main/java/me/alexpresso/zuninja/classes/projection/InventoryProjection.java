@@ -7,6 +7,7 @@ import me.alexpresso.zuninja.domain.nodes.item.Item;
 import me.alexpresso.zuninja.domain.nodes.user.User;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 public class InventoryProjection {
@@ -14,7 +15,7 @@ public class InventoryProjection {
     private final Map<InventoryType, Map<ShinyLevel, Inventory>> inventories;
 
     public InventoryProjection(final User user) {
-        this.inventories = new HashMap<>();
+        this.inventories = new ConcurrentHashMap<>();
 
         this.init(user);
     }
@@ -63,20 +64,12 @@ public class InventoryProjection {
             .orElse(0);
     }
 
-    /**
-     * get ItemCountProjection instance
-     * <p>
-     * Note: if the item is not in the specified inventory, it will return a new default instance (with NEEDED_BASE > 0)
-     * because the ItemProjection will be created later in the projection (with a null ItemCountProjection), it will
-     * later be initialized and calculted with the right values of needed amounts.
-     * </p>
-     * @param inventory inventory
-     * @param item item
-     * @return ItemCountProjection
-     */
-    public ItemCountProjection getCountProjection(final Map<String, ItemProjection> inventory, final Item item) {
-        return Optional.ofNullable(inventory.getOrDefault(item.getId(), null))
-            .map(ItemProjection::getCountProjection)
-            .orElse(new ItemCountProjection());
+    public ItemCountProjection getCountProjection(final Map<String, ItemProjection> inventory, final Item item, final ShinyLevel shinyLevel) {
+        if(inventory.containsKey(item.getId()))
+            return inventory.get(item.getId()).getCountProjection();
+
+        final var itemProjection = new ItemProjection(item, 0, 0, this, shinyLevel);
+        inventory.put(item.getId(), itemProjection);
+        return itemProjection.getCountProjection();
     }
 }

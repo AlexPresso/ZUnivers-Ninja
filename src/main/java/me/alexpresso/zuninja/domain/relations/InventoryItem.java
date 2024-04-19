@@ -11,7 +11,9 @@ import org.springframework.data.neo4j.core.schema.TargetNode;
 public class InventoryItem extends BaseGraphObject {
 
     private ShinyLevel shinyLevel;
-    private int upgradeLevel;
+    @JsonProperty("isGolden")
+    private Boolean golden;
+    private Integer upgradeLevel;
     private int quantity;
     @TargetNode
     private Item item;
@@ -28,7 +30,7 @@ public class InventoryItem extends BaseGraphObject {
     public boolean isUpgrade() {
         return this.upgradeLevel > 0;
     }
-    public int getUpgradeLevel() {
+    public Integer getUpgradeLevel() {
         return this.upgradeLevel;
     }
     public InventoryItem setUpgradeLevel(int upgradeLevel) {
@@ -52,6 +54,10 @@ public class InventoryItem extends BaseGraphObject {
         return this;
     }
 
+
+    public Boolean isGolden() {
+        return this.golden;
+    }
 
     @JsonProperty("shinyLevel")
     public void unpackShinyLevel(int shinyLevel) {

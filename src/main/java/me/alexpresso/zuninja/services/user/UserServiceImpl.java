@@ -3,6 +3,7 @@ package me.alexpresso.zuninja.services.user;
 import com.fasterxml.jackson.core.type.TypeReference;
 import me.alexpresso.zuninja.classes.activity.ActivityDetail;
 import me.alexpresso.zuninja.classes.challenge.Challenge;
+import me.alexpresso.zuninja.classes.config.ShinyLevel;
 import me.alexpresso.zuninja.classes.item.EvolutionDetail;
 import me.alexpresso.zuninja.domain.nodes.item.Item;
 import me.alexpresso.zuninja.domain.nodes.user.User;
@@ -99,12 +100,21 @@ public class UserServiceImpl implements UserService {
         //Neo4J OGM is missing some relations when not persisting twice after cleaning Set
         final var newUser = this.userRepository.save(user);
 
-        inventory.forEach(in -> newUser.getInventory().add(in
-            .setQuantity(in.getQuantity())
-            .setShinyLevel(in.getShinyLevel())
-            .setUpgradeLevel(in.getUpgradeLevel())
-            .setItem(items.get(in.getItem().getId()))
-        ));
+        for(final var in : inventory) {
+            var shinyLevel = in.getShinyLevel();
+            if(shinyLevel == null && in.isGolden() != null)
+                shinyLevel = in.isGolden() ? ShinyLevel.GOLDEN : ShinyLevel.NORMAL;
+
+            if(shinyLevel == null)
+                throw new RuntimeException("Shiny level is missing in response.");
+
+            newUser.getInventory().add(in
+                .setQuantity(in.getQuantity())
+                .setShinyLevel(shinyLevel)
+                .setUpgradeLevel(in.getUpgradeLevel())
+                .setItem(items.get(in.getItem().getId()))
+            );
+        }
 
         this.userRepository.save(newUser);
 

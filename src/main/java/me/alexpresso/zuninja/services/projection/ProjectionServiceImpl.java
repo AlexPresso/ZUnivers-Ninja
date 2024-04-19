@@ -12,7 +12,6 @@ import me.alexpresso.zuninja.classes.projection.*;
 import me.alexpresso.zuninja.classes.projection.action.*;
 import me.alexpresso.zuninja.classes.projection.action.ShinyElement;
 import me.alexpresso.zuninja.classes.projection.summary.Change;
-import me.alexpresso.zuninja.classes.projection.summary.SummaryElement;
 import me.alexpresso.zuninja.classes.projection.summary.SummaryType;
 import me.alexpresso.zuninja.classes.vortex.VortexStats;
 import me.alexpresso.zuninja.domain.nodes.item.Item;
@@ -177,7 +176,7 @@ public class ProjectionServiceImpl implements ProjectionService {
         for(final var fusion : state.getAllFusions()) {
             final var result = fusion.getResult();
 
-            if(state.getInventoryProjection().getQuantity(inventory, result) >= state.getInventoryProjection().getCountProjection(inventory, result).getTotalNeeded())
+            if(state.getInventoryProjection().getQuantity(inventory, result) >= state.getInventoryProjection().getCountProjection(inventory, result, shinyLevel).getTotalNeeded())
                 continue;
 
             final var missingInputs = fusion.getInputs().stream().anyMatch(i ->
@@ -323,7 +322,7 @@ public class ProjectionServiceImpl implements ProjectionService {
         final var cost = state.getConfigFor(i.getRarity(), ShinyLevel.NORMAL).getCraftValue();
         final var money = state.getMoneyFor(i);
 
-        if(ownedQuantity >= state.getInventoryProjection().getCountProjection(inventory, i).getTotalNeeded() || money.get() < cost)
+        if(ownedQuantity >= state.getInventoryProjection().getCountProjection(inventory, i, ShinyLevel.NORMAL).getTotalNeeded() || money.get() < cost)
             return;
 
         this.produceItem(state, i, ShinyLevel.NORMAL);
@@ -340,7 +339,7 @@ public class ProjectionServiceImpl implements ProjectionService {
             if(!iProj.getItem().isRecyclable() || iProj.getQuantity() <= ItemCountProjection.NEEDED_BASE)
                 return;
 
-            final var countProjection = state.getInventoryProjection().getCountProjection(inventory, iProj.getItem());
+            final var countProjection = state.getInventoryProjection().getCountProjection(inventory, iProj.getItem(), shinyLevel);
 
             if(iProj.getQuantity() <= countProjection.getTotalNeeded())
                 return;
@@ -397,7 +396,7 @@ public class ProjectionServiceImpl implements ProjectionService {
                            final ActionType type,
                            final ActionElement element) {
         boolean mustAdd = true;
-        final var previous = actions.size() > 0 ?
+        final var previous = !actions.isEmpty() ?
             actions.get(actions.size() - 1) :
             null;
 
