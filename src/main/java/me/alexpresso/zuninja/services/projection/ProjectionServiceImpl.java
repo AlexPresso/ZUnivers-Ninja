@@ -4,10 +4,12 @@ import me.alexpresso.zuninja.classes.cache.CacheEntry;
 import me.alexpresso.zuninja.classes.cache.MemoryCache;
 import me.alexpresso.zuninja.classes.challenge.Challenge;
 import me.alexpresso.zuninja.classes.config.Cost;
+import me.alexpresso.zuninja.classes.config.InvocationType;
 import me.alexpresso.zuninja.classes.config.Reward;
 import me.alexpresso.zuninja.classes.config.ShinyLevel;
 import me.alexpresso.zuninja.classes.item.InventoryType;
 import me.alexpresso.zuninja.classes.item.ItemEvolutionDetail;
+import me.alexpresso.zuninja.classes.item.RarityType;
 import me.alexpresso.zuninja.classes.projection.*;
 import me.alexpresso.zuninja.classes.projection.action.*;
 import me.alexpresso.zuninja.classes.projection.action.ShinyElement;
@@ -80,6 +82,8 @@ public class ProjectionServiceImpl implements ProjectionService {
         final var activeEvents = this.eventRepository.findEventsAtDate(LocalDateTime.now());
         final var allFusions = this.fusionRepository.findAll();
         final var allItems = this.itemRepository.findAll();
+        final var itemsNormalCount = this.itemRepository.findNormalCount();
+        final var itemsStarCount = this.itemRepository.findStarCount();
         final var config = this.configService.fetchConfiguration();
         final var dailyMap = this.userService.fetchLootActivity(discordTag);
         final var evolution = this.userService.fetchUserEvolution(discordTag);
@@ -100,6 +104,8 @@ public class ProjectionServiceImpl implements ProjectionService {
             vortexStats,
             allFusions,
             allItems,
+            itemsNormalCount,
+            itemsStarCount,
             config,
             challenges,
             dailyMap,
@@ -241,30 +247,50 @@ public class ProjectionServiceImpl implements ProjectionService {
         final var todayInvocations = (Set<String>) this.memoryCache.getOrDefault(state.getDiscordTag(), CacheEntry.INVOCATIONS, new HashSet<String>());
         final var hadCost = new AtomicBoolean(false);
 
-        if(!state.getActiveEvents().isEmpty()) {
-            state.getActiveEvents().forEach(e -> {
-                if(e.isOneTime() && todayInvocations.contains(e.getIdentifier()))
-                    return;
+        final var ownedNormalCount = state.getInventoryProjection().getInventory(InventoryType.CLASSIC, ShinyLevel.NORMAL).keySet().size();
+        final var ownedGoldenCount = state.getInventoryProjection().getInventory(InventoryType.CLASSIC, ShinyLevel.GOLDEN).keySet().size();
+        final var ownedChromaCount = state.getInventoryProjection().getInventory(InventoryType.CLASSIC, ShinyLevel.CHROMA).keySet().size();
+        final var ownedStarCount = state.getInventoryProjection().getQuantityByRarity(
+            state.getInventoryProjection().getInventory(InventoryType.CLASSIC, ShinyLevel.NORMAL),
+            RarityType.STAR.ordinal()
+        );
 
-                if(state.getBalance().get() >= e.getBalanceCost()) {
-                    this.addAction(state, actions, ActionType.INVOCATION, e);
-                    state.getBalance().getAndAdd(-e.getBalanceCost());
-                }
+        final var shouldInvokeMap = new HashMap<InvocationType, Boolean>() {{
+            put(InvocationType.BASIC, ownedNormalCount < state.getPoolNormalItemsCount());
+            put(InvocationType.GOLDEN, ownedGoldenCount < state.getPoolNormalItemsCount());
+            put(InvocationType.CHROMA, ownedChromaCount < state.getPoolNormalItemsCount());
+            put(InvocationType.STAR, ownedStarCount < state.getPoolStarItemsCount());
+        }};
 
-                todayInvocations.add(e.getIdentifier());
-                hadCost.set(e.getBalanceCost() > 0);
-            });
-
-            this.memoryCache.put(state.getDiscordTag(), CacheEntry.INVOCATIONS, todayInvocations);
-
-            if(hadCost.get())
+        shouldInvokeMap.forEach((type, should) -> {
+            if(!should)
                 return;
-        }
 
-        if(state.getBalance().get() >= Cost.INVOCATION.getValue()) {
-            this.addAction(state, actions, ActionType.INVOCATION, null);
-            state.getBalance().getAndAdd(-Cost.INVOCATION.getValue());
-        }
+            if(!state.getActiveEvents().isEmpty() && type == InvocationType.BASIC) {
+                state.getActiveEvents().forEach(e -> {
+                    if(e.isOneTime() && todayInvocations.contains(e.getIdentifier()))
+                        return;
+                    if(state.getBalance().get() < e.getBalanceCost())
+                        return;
+
+                    this.addAction(state, actions, ActionType.INVOCATION, e);
+                    state.getBalance().addAndGet(-e.getBalanceCost());
+
+                    todayInvocations.add(e.getIdentifier());
+                    hadCost.set(e.getBalanceCost() > 0);
+                });
+
+                this.memoryCache.put(state.getDiscordTag(), CacheEntry.INVOCATIONS, todayInvocations);
+
+                if(hadCost.get())
+                    return;
+            }
+
+            if(state.getBalance().get() >= type.getCost()) {
+                this.addAction(state, actions, ActionType.INVOCATION, type);
+                state.getBalance().getAndAdd(-type.getCost());
+            }
+        });
     }
 
 

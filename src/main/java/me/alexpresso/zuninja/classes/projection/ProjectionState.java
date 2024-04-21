@@ -28,6 +28,8 @@ public class ProjectionState {
     private final Set<Event> activeEvents;
     private final List<Fusion> allFusions;
     private final List<Item> allItems;
+    private final Long poolNormalItemsCount;
+    private final Long poolStarItemsCount;
     private final Config config;
     private final AtomicBoolean subscribed;
     private final Set<Challenge> challenges;
@@ -41,6 +43,8 @@ public class ProjectionState {
                            final VortexStats vortexStats,
                            final List<Fusion> allFusions,
                            final List<Item> allItems,
+                           final Long poolNormalItemsCount,
+                           final Long poolStarItemsCount,
                            final Config config,
                            final Set<Challenge> challenges,
                            final Map<String, Integer> dailyMap,
@@ -56,6 +60,8 @@ public class ProjectionState {
         this.activeEvents = activeEvents;
         this.allFusions = allFusions;
         this.allItems = allItems;
+        this.poolNormalItemsCount = poolNormalItemsCount;
+        this.poolStarItemsCount = poolStarItemsCount;
         this.config = config;
         this.subscribed = new AtomicBoolean(user.getStatistics().isSubscribed());
         this.challenges = challenges;
@@ -105,6 +111,14 @@ public class ProjectionState {
 
     public List<Item> getAllItems() {
         return this.allItems;
+    }
+
+    public Long getPoolNormalItemsCount() {
+        return this.poolNormalItemsCount;
+    }
+
+    public Long getPoolStarItemsCount() {
+        return this.poolStarItemsCount;
     }
 
     public ConfigPart getConfigFor(final int rarity, final ShinyLevel shinyLevel) {

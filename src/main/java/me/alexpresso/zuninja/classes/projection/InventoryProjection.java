@@ -64,6 +64,13 @@ public class InventoryProjection {
             .orElse(0);
     }
 
+    public int getQuantityByRarity(final Map<String, ItemProjection> inventory, final int rarity) {
+        return inventory.values().stream()
+            .filter(iProj -> iProj.getItem().getRarity() == rarity)
+            .map(ItemProjection::getQuantity)
+            .reduce(0, Integer::sum);
+    }
+
     public ItemCountProjection getCountProjection(final Map<String, ItemProjection> inventory, final Item item, final ShinyLevel shinyLevel) {
         if(inventory.containsKey(item.getId()))
             return inventory.get(item.getId()).getCountProjection();
