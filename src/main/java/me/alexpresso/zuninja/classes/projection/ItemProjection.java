@@ -62,7 +62,7 @@ public class ItemProjection implements ActionElement {
         this.countProjection.getAtomicCount(ActionType.ENCHANT).set(fusionEnchantQuantityToAdd);
 
         //Add needed normal amount to craft for golden stuff
-        if(this.shinyLevel == ShinyLevel.NORMAL) {
+        if(this.shinyLevel == ShinyLevel.NORMAL && this.item.isGoldable()) {
             final var atomicEnchant = this.countProjection.getAtomicCount(ActionType.ENCHANT);
             final var goldenInventory = this.inventory.getInventory(InventoryType.CLASSIC, ShinyLevel.GOLDEN);
 
