@@ -88,12 +88,11 @@ public class ProjectionServiceImpl implements ProjectionService {
         final var dailyMap = this.userService.fetchLootActivity(discordTag);
         final var evolution = this.userService.fetchUserEvolution(discordTag);
         final var vortexStats = this.vortexService.getUserCurrentVortexStats(discordTag);
+        final var vortexPack = this.vortexService.fetchCurrentVortexPack();
         final var challenges = this.userService.fetchUserChallenges(discordTag).stream()
             .filter(c -> c.getType().getActionType().isPresent())
             .filter(c -> c.getProgress().getCurrent() < c.getProgress().getMax())
             .collect(Collectors.toSet());
-
-        this.memoryCache.put(CacheEntry.CURRENT_VORTEX_PACK, this.vortexService.fetchCurrentVortexPack());
 
         this.tryInitNewDay(discordTag);
 
@@ -102,6 +101,7 @@ public class ProjectionServiceImpl implements ProjectionService {
             user,
             activeEvents,
             vortexStats,
+            vortexPack,
             allFusions,
             allItems,
             itemsNormalCount,
@@ -215,7 +215,7 @@ public class ProjectionServiceImpl implements ProjectionService {
 
         classicNormalInventory.values().stream()
             .filter(ip -> ip.getQuantity() > ItemCountProjection.NEEDED_BASE)
-            .filter(ip -> ip.getItem().isGoldable() && this.isInCurrentVortexPack(ip.getItem()))
+            .filter(ip -> ip.getItem().isGoldable() && this.isInCurrentVortexPack(ip.getItem(), state))
             .forEach(iProj -> {
                 final var item = iProj.getItem();
                 final var goldenQuantity = state.getInventoryProjection().getQuantity(classicGoldenInventory, item);
@@ -341,7 +341,7 @@ public class ProjectionServiceImpl implements ProjectionService {
     }
 
     private void tryCraft(final ActionList actions, final Item i, final Map<String, ItemProjection> inventory, final ProjectionState state) {
-        if(!i.isCraftable() || !this.isInCurrentVortexPack(i))
+        if(!i.isCraftable() || !this.isInCurrentVortexPack(i, state))
             return;
 
         final var ownedQuantity = state.getInventoryProjection().getQuantity(inventory, i);
@@ -518,9 +518,9 @@ public class ProjectionServiceImpl implements ProjectionService {
     }
 
 
-    private boolean isInCurrentVortexPack(final Item item) {
+    private boolean isInCurrentVortexPack(final Item item, final ProjectionState state) {
         return item.getPack().getName().equalsIgnoreCase("classique") ||
-            this.memoryCache.getOrDefault(CacheEntry.CURRENT_VORTEX_PACK, "").equals(item.getPack().getId());
+            state.getVortexPack().equals(item.getPack().getId());
     }
 
     private ProjectionSummary makeSummary(final ActionList actions,

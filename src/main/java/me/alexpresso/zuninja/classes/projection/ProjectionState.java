@@ -24,6 +24,7 @@ public class ProjectionState {
     private final AtomicInteger balance;
     private final AtomicInteger upgradeDust;
     private final VortexStats vortexStats;
+    private final String vortexPack;
     private final AtomicInteger ascensionsCount;
     private final Set<Event> activeEvents;
     private final List<Fusion> allFusions;
@@ -41,6 +42,7 @@ public class ProjectionState {
                            final User user,
                            final Set<Event> activeEvents,
                            final VortexStats vortexStats,
+                           final String vortexPack,
                            final List<Fusion> allFusions,
                            final List<Item> allItems,
                            final Long poolNormalItemsCount,
@@ -56,6 +58,7 @@ public class ProjectionState {
         this.balance = new AtomicInteger(user.getBalance());
         this.upgradeDust = new AtomicInteger(user.getUpgradeDust());
         this.vortexStats = vortexStats;
+        this.vortexPack = vortexPack;
         this.ascensionsCount = new AtomicInteger(vortexStats != null ? vortexStats.getLogCount() : 0);
         this.activeEvents = activeEvents;
         this.allFusions = allFusions;
@@ -95,6 +98,10 @@ public class ProjectionState {
 
     public Optional<VortexStats> getVortexStats() {
         return Optional.ofNullable(this.vortexStats);
+    }
+
+    public String getVortexPack() {
+        return this.vortexPack;
     }
 
     public AtomicInteger getAscensionsCount() {
