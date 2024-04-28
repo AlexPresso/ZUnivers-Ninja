@@ -19,7 +19,9 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
+import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -82,18 +84,29 @@ public class DispatchServiceImpl implements DispatchService {
 
         user.setLastAdviceMd5(hash);
 
-        final var sb = new StringBuilder();
-        summary.getChanges().entrySet().stream()
-            .filter(e -> !e.getValue().getBefore().equals(e.getValue().getAfter()))
-            .forEach(e -> sb.append(String.format("%s: `%s` → `%s`\n", e.getKey(), e.getValue().getBefore(), e.getValue().getAfter())));
-
         final var message = new WebhookMessageBuilder()
-            .setContent(discordTag);
+                .setContent(discordTag);
         final var embed = new WebhookEmbedBuilder()
-            .setColor(0xff3434);
+                .setColor(0xff3434);
 
-        if(sb.toString().length() > 0)
-            embed.addField(new WebhookEmbed.EmbedField(true, "Infos", sb.toString()));
+        summary.getChanges().entrySet().stream()
+            .collect(Collectors.groupingBy(e -> e.getKey().getSummaryType()))
+            .forEach((type, map) -> {
+                final var sb = new StringBuilder();
+
+                map.forEach(e ->
+                    sb.append(
+                        String.format("%s: `%s` → `%s`\n",
+                            e.getKey().getDisplayName(),
+                            e.getValue().getBefore(),
+                            e.getValue().getAfter()
+                        )
+                    )
+                );
+
+                if(!sb.toString().isEmpty())
+                    embed.addField(new WebhookEmbed.EmbedField(true, type.getDisplayName(), sb.toString()));
+            });
 
         if(cmds.length() < 4096) {
             embed.setDescription(String.format("Conseils :\n```\n%s```", cmds));

@@ -9,7 +9,8 @@ public class ConfigPart {
     private int craftValue;
     private int recycleValue;
     @JsonProperty("isGolden")
-    private boolean golden;
+    private Boolean golden;
+    private ShinyLevel shinyLevel;
 
     public int getRarity() {
         return this.rarity;
@@ -23,7 +24,16 @@ public class ConfigPart {
         return this.recycleValue;
     }
 
-    public boolean isGolden() {
-        return this.golden;
+    public ShinyLevel getShinyLevel() {
+        if(this.shinyLevel != null && this.shinyLevel != ShinyLevel.UNKNOWN)
+            return this.shinyLevel;
+
+        return this.golden ? ShinyLevel.GOLDEN : ShinyLevel.NORMAL;
+    }
+
+
+    @JsonProperty("shinyLevel")
+    public void unpackShinyLevel(int shinyLevel) {
+        this.shinyLevel = ShinyLevel.valueOf(shinyLevel);
     }
 }

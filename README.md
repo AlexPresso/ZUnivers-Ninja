@@ -16,7 +16,7 @@ This project is not affiliated with the ZUnivers's project. It's a community pro
 - ✅ `!recycle` projection
 - ✅ `!fusion` projection
 - ✅ `!upgrade` projection
-- ✅ `!im` projection (with current event priority)
+- ✅ `!im` projection (with boosters and current event priority)
 - ✅ `!craft` projection
 - ✅ `!ascension` projection
 - ✅ challenges projection
