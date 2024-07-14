@@ -1,8 +1,7 @@
 package me.alexpresso.zuninja.classes.config;
 
 public enum Cost {
-    ASCENSION(20),
-    INVOCATION(1000);
+    ASCENSION(20);
 
     private final int value;
 

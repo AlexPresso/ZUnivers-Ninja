@@ -1,83 +1,58 @@
 package me.alexpresso.zuninja.classes.projection;
 
+import me.alexpresso.zuninja.classes.config.ShinyLevel;
+import me.alexpresso.zuninja.classes.item.Inventory;
+import me.alexpresso.zuninja.classes.item.InventoryType;
 import me.alexpresso.zuninja.domain.nodes.item.Item;
 import me.alexpresso.zuninja.domain.nodes.user.User;
 
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 public class InventoryProjection {
-    private final Map<String, ItemProjection> normalInventory;
-    private final Map<String, ItemProjection> goldenInventory;
-    private final Map<String, ItemProjection> upgradeInventory;
-    private final Map<String, ItemProjection> upgradeGoldenInventory;
+
+    private final Map<InventoryType, Map<ShinyLevel, Inventory>> inventories;
 
     public InventoryProjection(final User user) {
-        this.normalInventory = new HashMap<>();
-        this.goldenInventory = new HashMap<>();
-        this.upgradeInventory = new HashMap<>();
-        this.upgradeGoldenInventory = new HashMap<>();
+        this.inventories = new ConcurrentHashMap<>();
 
         this.init(user);
     }
 
     private void init(final User user) {
         for(final var inventoryItem : user.getInventory()) {
-            final Map<String, ItemProjection> inventory;
+            final var type = inventoryItem.isUpgrade() ?
+                InventoryType.UPGRADE :
+                InventoryType.CLASSIC;
 
-            if(inventoryItem.isGolden()) {
-                if(inventoryItem.isUpgrade()) {
-                    inventory = upgradeGoldenInventory;
-                } else {
-                    inventory = goldenInventory;
-                }
-            } else {
-                if(inventoryItem.isUpgrade()) {
-                    inventory = upgradeInventory;
-                } else {
-                    inventory = normalInventory;
-                }
-            }
-
-            inventory.put(inventoryItem.getItem().getId(), new ItemProjection(inventoryItem, this, inventoryItem.isGolden()));
+            this.getInventory(type, inventoryItem.getShinyLevel()).put(
+                inventoryItem.getItem().getId(),
+                new ItemProjection(inventoryItem, this, inventoryItem.getShinyLevel())
+            );
         }
     }
 
-    public Map<String, ItemProjection> getNormalInventory() {
-        return this.normalInventory;
+    public Set<Inventory> getAllInventories() {
+        return this.inventories.values().stream()
+            .flatMap(m -> m.values().stream())
+            .collect(Collectors.toSet());
     }
 
-    public Map<String, ItemProjection> getGoldenInventory() {
-        return this.goldenInventory;
+    public Inventory getInventory(final InventoryType type, final ShinyLevel shinyLevel) {
+        this.inventories.computeIfAbsent(type, k -> new HashMap<>());
+        this.inventories.get(type).computeIfAbsent(shinyLevel, k -> new Inventory(type, shinyLevel));
+
+        return this.inventories
+            .get(type)
+            .get(shinyLevel);
     }
 
-    public Map<String, ItemProjection> getUpgradeInventory() {
-        return this.upgradeInventory;
+    public long getInventoryCount(final InventoryType type, final ShinyLevel shinyLevel) {
+        return this.getCount(this.getInventory(type, shinyLevel).values());
     }
 
-    public Map<String, ItemProjection> getUpgradeGoldenInventory() {
-        return this.upgradeGoldenInventory;
-    }
-
-    public long getNormalCount() {
-        return this.getCount(this.normalInventory.values());
-    }
-
-    public long getGoldenCount() {
-        return this.getCount(this.goldenInventory.values());
-    }
-
-    public long getUpgradeCount() {
-        return this.getCount(this.upgradeInventory.values());
-    }
-
-    public long getUpgradeGoldenCount() {
-        return this.getCount(this.upgradeGoldenInventory.values());
-    }
-
-    private long getCount(final Collection<ItemProjection> projections) {
+    public long getCount(final Collection<ItemProjection> projections) {
         return projections.stream()
             .filter(p -> p.getQuantity() > 0)
             .count();
@@ -89,20 +64,19 @@ public class InventoryProjection {
             .orElse(0);
     }
 
-    /**
-     * get ItemCountProjection instance
-     * <p>
-     * Note: if the item is not in the specified inventory, it will return a new default instance (with NEEDED_BASE > 0)
-     * because the ItemProjection will be created later in the projection (with a null ItemCountProjection), it will
-     * later be initialized and calculted with the right values of needed amounts.
-     * </p>
-     * @param inventory inventory
-     * @param item item
-     * @return ItemCountProjection
-     */
-    public ItemCountProjection getCountProjection(final Map<String, ItemProjection> inventory, final Item item) {
-        return Optional.ofNullable(inventory.getOrDefault(item.getId(), null))
-            .map(ItemProjection::getCountProjection)
-            .orElse(new ItemCountProjection());
+    public int getQuantityByRarity(final Map<String, ItemProjection> inventory, final int rarity) {
+        return inventory.values().stream()
+            .filter(iProj -> iProj.getItem().getRarity() == rarity)
+            .map(ItemProjection::getQuantity)
+            .reduce(0, Integer::sum);
+    }
+
+    public ItemCountProjection getCountProjection(final Map<String, ItemProjection> inventory, final Item item, final ShinyLevel shinyLevel) {
+        if(inventory.containsKey(item.getId()))
+            return inventory.get(item.getId()).getCountProjection();
+
+        final var itemProjection = new ItemProjection(item, 0, 0, this, shinyLevel);
+        inventory.put(item.getId(), itemProjection);
+        return itemProjection.getCountProjection();
     }
 }
