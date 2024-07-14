@@ -25,10 +25,7 @@ public class ConfigPart {
     }
 
     public ShinyLevel getShinyLevel() {
-        if(this.shinyLevel != null && this.shinyLevel != ShinyLevel.UNKNOWN)
-            return this.shinyLevel;
-
-        return this.golden ? ShinyLevel.GOLDEN : ShinyLevel.NORMAL;
+        return this.shinyLevel;
     }
 
 
