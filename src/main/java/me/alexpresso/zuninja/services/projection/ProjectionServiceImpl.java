@@ -7,8 +7,10 @@ import me.alexpresso.zuninja.classes.config.Cost;
 import me.alexpresso.zuninja.classes.config.InvocationType;
 import me.alexpresso.zuninja.classes.config.Reward;
 import me.alexpresso.zuninja.classes.config.ShinyLevel;
+import me.alexpresso.zuninja.classes.corporation.Corporation;
 import me.alexpresso.zuninja.classes.item.InventoryType;
 import me.alexpresso.zuninja.classes.item.ItemEvolutionDetail;
+import me.alexpresso.zuninja.classes.item.MoneyType;
 import me.alexpresso.zuninja.classes.item.RarityType;
 import me.alexpresso.zuninja.classes.projection.*;
 import me.alexpresso.zuninja.classes.projection.action.*;
@@ -24,6 +26,7 @@ import me.alexpresso.zuninja.repositories.EventRepository;
 import me.alexpresso.zuninja.repositories.FusionRepository;
 import me.alexpresso.zuninja.repositories.ItemRepository;
 import me.alexpresso.zuninja.services.config.ConfigService;
+import me.alexpresso.zuninja.services.corporation.CorporationService;
 import me.alexpresso.zuninja.services.user.UserService;
 import me.alexpresso.zuninja.services.vortex.VortexService;
 import org.slf4j.Logger;
@@ -50,6 +53,7 @@ public class ProjectionServiceImpl implements ProjectionService {
     private final ItemRepository itemRepository;
     private final ConfigService configService;
     private final VortexService vortexService;
+    private final CorporationService corporationService;
     private final MemoryCache memoryCache;
 
     private final static int VORTEX_MAX = 6;
@@ -62,12 +66,14 @@ public class ProjectionServiceImpl implements ProjectionService {
                                  final MemoryCache mc,
                                  final ConfigService cs,
                                  final VortexService vs,
+                                 final CorporationService cps,
                                  final ItemRepository ir) {
         this.fusionRepository = fr;
         this.userService = us;
         this.eventRepository = er;
         this.memoryCache = mc;
         this.configService = cs;
+        this.corporationService = cps;
         this.vortexService = vs;
         this.itemRepository = ir;
     }
@@ -93,12 +99,16 @@ public class ProjectionServiceImpl implements ProjectionService {
             .filter(c -> c.getType().getActionType().isPresent())
             .filter(c -> c.getProgress().getCurrent() < c.getProgress().getMax())
             .collect(Collectors.toSet());
+        final var corporation = user.getStatistics().getCorporationId() != null ?
+            this.corporationService.fetchCorporation(user.getStatistics().getCorporationId()) :
+            new Corporation(); //to init bonus rewards = 0
 
         this.tryInitNewDay(discordTag);
 
         final var state = new ProjectionState(
             discordTag,
             user,
+            corporation.getBonusValues(),
             activeEvents,
             vortexStats,
             vortexPack,
@@ -150,11 +160,12 @@ public class ProjectionServiceImpl implements ProjectionService {
     private void projectDaily(final ActionList actions, final ProjectionState state) {
         final var today = LocalDate.now();
         final var format = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+        final var rewardWithBonus = Reward.DAILY.getValue() + state.getCorporationBonusValues().get(MoneyType.BALANCE.getBonusType());
         var todayDaily = state.getDailyMap().getOrDefault(today.format(format), 0);
 
         if(todayDaily == 0) {
             this.addAction(state, actions, ActionType.DAILY, null);
-            state.getBalance().getAndAdd(Reward.DAILY.getValue());
+            state.getBalance().getAndAdd(rewardWithBonus);
             todayDaily += Reward.DAILY.getValue();
             state.getDailyMap().put(today.format(format), todayDaily);
         }
@@ -172,7 +183,7 @@ public class ProjectionServiceImpl implements ProjectionService {
             return;
 
         this.addAction(state, actions, ActionType.WEEKLY, null);
-        state.getBalance().getAndAdd(Reward.DAILY.getValue());
+        state.getBalance().getAndAdd(rewardWithBonus);
         state.getDailyMap().put(today.format(format), todayDaily + Reward.DAILY.getValue());
     }
 
@@ -370,8 +381,9 @@ public class ProjectionServiceImpl implements ProjectionService {
             if(iProj.getQuantity() <= countProjection.getTotalNeeded())
                 return;
 
+            final var moneyType = state.getMoneyTypeFor(iProj.getItem());
             final var money = state.getMoneyFor(iProj.getItem());
-            final var recycleValue = state.getConfigFor(iProj.getItem().getRarity(), shinyLevel).getRecycleValue();
+            final var recycleValue = state.getConfigFor(iProj.getItem().getRarity(), shinyLevel).getRecycleValue() + state.getCorporationBonusValues().get(moneyType.getBonusType());
             final var count = iProj.getQuantity() - countProjection.getTotalNeeded();
 
             try {

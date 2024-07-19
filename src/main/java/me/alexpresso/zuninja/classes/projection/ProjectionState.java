@@ -4,7 +4,9 @@ import me.alexpresso.zuninja.classes.challenge.Challenge;
 import me.alexpresso.zuninja.classes.config.Config;
 import me.alexpresso.zuninja.classes.config.ConfigPart;
 import me.alexpresso.zuninja.classes.config.ShinyLevel;
+import me.alexpresso.zuninja.classes.corporation.CorporationBonusType;
 import me.alexpresso.zuninja.classes.item.EvolutionDetail;
+import me.alexpresso.zuninja.classes.item.MoneyType;
 import me.alexpresso.zuninja.classes.vortex.VortexStats;
 import me.alexpresso.zuninja.domain.nodes.event.Event;
 import me.alexpresso.zuninja.domain.nodes.item.Fusion;
@@ -18,6 +20,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class ProjectionState {
 
     private final String discordTag;
+    private final Map<CorporationBonusType, Integer> corporationBonusValues;
     private final InventoryProjection inventory;
     private final AtomicInteger loreDust;
     private final AtomicInteger loreFragment;
@@ -40,6 +43,7 @@ public class ProjectionState {
 
     public ProjectionState(final String discordTag,
                            final User user,
+                           final Map<CorporationBonusType, Integer> corporationBonusValues,
                            final Set<Event> activeEvents,
                            final VortexStats vortexStats,
                            final String vortexPack,
@@ -52,6 +56,7 @@ public class ProjectionState {
                            final Map<String, Integer> dailyMap,
                            final EvolutionDetail evolutionDetail) {
         this.discordTag = discordTag;
+        this.corporationBonusValues = corporationBonusValues;
         this.inventory = new InventoryProjection(user);
         this.loreDust = new AtomicInteger(user.getLoreDust());
         this.loreFragment = new AtomicInteger(user.getLoreFragment());
@@ -74,6 +79,10 @@ public class ProjectionState {
 
     public String getDiscordTag() {
         return this.discordTag;
+    }
+
+    public Map<CorporationBonusType, Integer> getCorporationBonusValues() {
+        return this.corporationBonusValues;
     }
 
     public InventoryProjection getInventoryProjection() {
@@ -138,9 +147,17 @@ public class ProjectionState {
     }
 
     public AtomicInteger getMoneyFor(final Item item) {
+        return switch(this.getMoneyTypeFor(item)) {
+            case BALANCE -> this.balance;
+            case LORE_DUST -> this.loreDust;
+            case LORE_FRAGMENT -> this.loreFragment;
+        };
+    }
+
+    public MoneyType getMoneyTypeFor(final Item item) {
         return item.getPack().getName().equalsIgnoreCase("classique") ?
-            this.loreDust :
-            this.loreFragment;
+            MoneyType.LORE_DUST :
+            MoneyType.LORE_FRAGMENT;
     }
 
     public Set<Challenge> getChallenges() {

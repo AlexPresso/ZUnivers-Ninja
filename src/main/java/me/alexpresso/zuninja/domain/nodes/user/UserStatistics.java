@@ -1,9 +1,17 @@
 package me.alexpresso.zuninja.domain.nodes.user;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import me.alexpresso.zuninja.classes.challenge.ChallengeType;
 import me.alexpresso.zuninja.domain.base.BaseGraphObject;
 import org.springframework.data.neo4j.core.schema.Node;
 import org.springframework.data.neo4j.core.schema.Relationship;
+
+import java.util.Comparator;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 @Node
 public class UserStatistics extends BaseGraphObject {
@@ -15,11 +23,11 @@ public class UserStatistics extends BaseGraphObject {
     private int itemCount;
     private int luckyCount;
     private int tradeCount;
+    private String corporationId;
     @JsonProperty("isSubscribed")
     private boolean subscribed;
     @Relationship(type = "USER_STATISTICS", direction = Relationship.Direction.INCOMING)
     private User user;
-
 
     public int getAchievementCount() {
         return achievementCount;
@@ -99,5 +107,22 @@ public class UserStatistics extends BaseGraphObject {
     public UserStatistics setSubscribed(final boolean subscribed) {
         this.subscribed = subscribed;
         return this;
+    }
+
+    public String getCorporationId() {
+        return this.corporationId;
+    }
+    public UserStatistics setCorporationId(final String corporationId) {
+        this.corporationId = corporationId;
+        return this;
+    }
+
+    @JsonProperty("userCorporation")
+    private void unpackCorporation(final Map<String, Object> userCorporation) {
+        if(!userCorporation.containsKey("corporation"))
+            return;
+
+        final Map<String, Object> corporation = (Map<String, Object>) userCorporation.get("corporation");
+        corporation.computeIfPresent("id", (k, v) -> this.corporationId = v.toString());
     }
 }

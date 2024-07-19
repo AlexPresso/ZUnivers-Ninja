@@ -22,6 +22,8 @@ This project is not affiliated with the ZUnivers's project. It's a community pro
 - ✅ challenges projection
 - ✅ evolution projection
 - ✅ constellation projection
+- ✅ 'chromas' projection
+- ✅ corporations projection
 - ✅ plugin system
 - (Soon) auto subscription based on a rentability check
 
