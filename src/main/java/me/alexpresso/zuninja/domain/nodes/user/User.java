@@ -25,6 +25,22 @@ public class User extends BaseGraphObject {
     private Set<InventoryItem> inventory = new HashSet<>();
 
 
+    public String getDiscordId() {
+        return discordId;
+    }
+    public User setDiscordId(String discordId) {
+        this.discordId = discordId;
+        return this;
+    }
+
+    public String getDiscordUserName() {
+        return discordUserName;
+    }
+    public User setDiscordUserName(String discordUserName) {
+        this.discordUserName = discordUserName;
+        return this;
+    }
+
     public int getPosition() {
         return position;
     }
