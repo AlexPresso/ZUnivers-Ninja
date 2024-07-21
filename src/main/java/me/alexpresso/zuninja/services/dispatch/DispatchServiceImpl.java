@@ -19,9 +19,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
-import java.util.Map;
 import java.util.Optional;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -98,8 +96,8 @@ public class DispatchServiceImpl implements DispatchService {
                     sb.append(
                         String.format("%s: `%s` → `%s`\n",
                             e.getKey().getDisplayName(),
-                            e.getValue().getBefore(),
-                            e.getValue().getAfter()
+                            e.getValue().before(),
+                            e.getValue().after()
                         )
                     )
                 );

@@ -26,7 +26,7 @@ public class ProjectionSummary {
     }
 
     public void put(final SummaryElement element, final Change change) {
-        if(change.getBefore().equals(change.getAfter()))
+        if(change.before().equals(change.after()))
             return;
 
         this.changes.put(element, change);

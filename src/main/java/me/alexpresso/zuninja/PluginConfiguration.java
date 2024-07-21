@@ -1,5 +1,6 @@
 package me.alexpresso.zuninja;
 
+import org.jetbrains.annotations.NotNull;
 import org.pf4j.spring.SpringPluginManager;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.BeanFactory;
@@ -24,7 +25,7 @@ public class PluginConfiguration implements BeanFactoryAware {
     }
 
     @Override
-    public void setBeanFactory(final BeanFactory beanFactory) throws BeansException {
+    public void setBeanFactory(@NotNull final BeanFactory beanFactory) throws BeansException {
         this.beanFactory = beanFactory;
     }
 

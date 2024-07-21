@@ -1,17 +1,11 @@
 package me.alexpresso.zuninja.domain.nodes.user;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import me.alexpresso.zuninja.classes.challenge.ChallengeType;
 import me.alexpresso.zuninja.domain.base.BaseGraphObject;
 import org.springframework.data.neo4j.core.schema.Node;
 import org.springframework.data.neo4j.core.schema.Relationship;
 
-import java.util.Comparator;
 import java.util.Map;
-import java.util.Set;
-import java.util.TreeMap;
-import java.util.function.Supplier;
-import java.util.stream.Collectors;
 
 @Node
 public class UserStatistics extends BaseGraphObject {

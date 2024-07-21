@@ -21,24 +21,23 @@ public class Corporation {
             .collect(Collectors.toMap(CorporationBonus::getType, Function.identity()));
     }
 
-    public Map<CorporationBonusType, Integer> getBonusValues() {
-        final var bonusValues = new HashMap<CorporationBonusType, Integer>();
+    public Map<CorporationBonusType, Double> getCalculatedBonusValues() {
+        final var bonusValues = new HashMap<CorporationBonusType, Double>();
 
         for(final var type : CorporationBonusType.values()) {
-            if(!corporationBonuses.containsKey(type)) {
-                bonusValues.put(type, 0);
+            if(!corporationBonuses.containsKey(type))
+                continue;
+
+            final var bonus = corporationBonuses.get(type);
+
+            if(!type.isRewarding()) {
+                bonusValues.put(type, (double) bonus.getLevel());
                 continue;
             }
 
-            final var bonus = corporationBonuses.get(type);
-            var reward = 0;
-            switch (bonus.getType()) {
-                case RECYCLE_LORE_DUST, RECYCLE_LORE_FRAGMENT -> reward = bonus.getLevel() / 100;
-                case LOOT -> {
-                    for(var i = bonus.getLevel(); i > 0; i--) {
-                        reward += i*10;
-                    }
-                }
+            var reward = 0D;
+            for(var i = bonus.getLevel(); i > 0; i--) {
+                reward += i * type.getMultiplier();
             }
 
             bonusValues.put(bonus.getType(), reward);

@@ -20,12 +20,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class ProjectionState {
 
     private final String discordTag;
-    private final Map<CorporationBonusType, Integer> corporationBonusValues;
+    private final Map<CorporationBonusType, Double> corporationBonusValues;
     private final InventoryProjection inventory;
-    private final AtomicInteger loreDust;
-    private final AtomicInteger loreFragment;
-    private final AtomicInteger balance;
-    private final AtomicInteger upgradeDust;
+    private final Map<MoneyType, AtomicInteger> moneys = new HashMap<>();
     private final VortexStats vortexStats;
     private final String vortexPack;
     private final AtomicInteger ascensionsCount;
@@ -43,7 +40,7 @@ public class ProjectionState {
 
     public ProjectionState(final String discordTag,
                            final User user,
-                           final Map<CorporationBonusType, Integer> corporationBonusValues,
+                           final Map<CorporationBonusType, Double> corporationBonusValues,
                            final Set<Event> activeEvents,
                            final VortexStats vortexStats,
                            final String vortexPack,
@@ -58,10 +55,11 @@ public class ProjectionState {
         this.discordTag = discordTag;
         this.corporationBonusValues = corporationBonusValues;
         this.inventory = new InventoryProjection(user);
-        this.loreDust = new AtomicInteger(user.getLoreDust());
-        this.loreFragment = new AtomicInteger(user.getLoreFragment());
-        this.balance = new AtomicInteger(user.getBalance());
-        this.upgradeDust = new AtomicInteger(user.getUpgradeDust());
+
+        for(final var type : MoneyType.values()) {
+            this.moneys.put(type, new AtomicInteger(user.getMoneyAmount(type)));
+        }
+
         this.vortexStats = vortexStats;
         this.vortexPack = vortexPack;
         this.ascensionsCount = new AtomicInteger(vortexStats != null ? vortexStats.getLogCount() : 0);
@@ -81,28 +79,12 @@ public class ProjectionState {
         return this.discordTag;
     }
 
-    public Map<CorporationBonusType, Integer> getCorporationBonusValues() {
+    public Map<CorporationBonusType, Double> getCorporationBonusValues() {
         return this.corporationBonusValues;
     }
 
     public InventoryProjection getInventoryProjection() {
         return this.inventory;
-    }
-
-    public AtomicInteger getLoreDust() {
-        return this.loreDust;
-    }
-
-    public AtomicInteger getLoreFragment() {
-        return this.loreFragment;
-    }
-
-    public AtomicInteger getBalance() {
-        return this.balance;
-    }
-
-    public AtomicInteger getUpgradeDust() {
-        return this.upgradeDust;
     }
 
     public Optional<VortexStats> getVortexStats() {
@@ -146,18 +128,14 @@ public class ProjectionState {
         return this.subscribed;
     }
 
-    public AtomicInteger getMoneyFor(final Item item) {
-        return switch(this.getMoneyTypeFor(item)) {
-            case BALANCE -> this.balance;
-            case LORE_DUST -> this.loreDust;
-            case LORE_FRAGMENT -> this.loreFragment;
-        };
-    }
-
     public MoneyType getMoneyTypeFor(final Item item) {
         return item.getPack().getName().equalsIgnoreCase("classique") ?
             MoneyType.LORE_DUST :
             MoneyType.LORE_FRAGMENT;
+    }
+
+    public AtomicInteger getMoneyAmount(final MoneyType moneyType) {
+        return moneys.get(moneyType);
     }
 
     public Set<Challenge> getChallenges() {
