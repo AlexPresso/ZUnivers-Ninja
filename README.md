@@ -1,5 +1,5 @@
 <div align="center">
-<img src="https://repository-images.githubusercontent.com/420819440/51db7016-b325-4d1b-a1d3-ce82d771f58b" height="320px">
+<img alt="logo" src="https://repository-images.githubusercontent.com/420819440/51db7016-b325-4d1b-a1d3-ce82d771f58b" height="320px">
 </div>
 
 This project aims to suggest to one (or more) users: the best actions scenario to take.
@@ -22,6 +22,8 @@ This project is not affiliated with the ZUnivers's project. It's a community pro
 - ✅ challenges projection
 - ✅ evolution projection
 - ✅ constellation projection
+- ✅ 'chromas' projection
+- ✅ corporations projection
 - ✅ plugin system
 - (Soon) auto subscription based on a rentability check
 
