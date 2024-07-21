@@ -25,8 +25,10 @@ public class Corporation {
         final var bonusValues = new HashMap<CorporationBonusType, Double>();
 
         for(final var type : CorporationBonusType.values()) {
-            if(!corporationBonuses.containsKey(type))
+            if(this.corporationBonuses == null || !corporationBonuses.containsKey(type)) {
+                bonusValues.put(type, 0D);
                 continue;
+            }
 
             final var bonus = corporationBonuses.get(type);
 
