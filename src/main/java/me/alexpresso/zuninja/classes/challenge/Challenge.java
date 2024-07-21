@@ -25,7 +25,7 @@ public class Challenge implements SummaryElement {
 
     public ChallengeProgress getProgress() {
         if(this.progress == null)
-            return new ChallengeProgress("osef", this.challengeLog != null ? 1 : 0, 1);
+            return new ChallengeProgress("???", this.challengeLog != null ? 1 : 0, 1);
 
         return this.progress;
     }

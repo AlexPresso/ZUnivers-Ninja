@@ -89,8 +89,20 @@ public class UserServiceImpl implements UserService {
         final var user = this.getUser(discordTag)
             .orElseGet(() -> this.userStatsRepository.save(statistics).getUser());
 
-        user.setStatistics(user.getStatistics() == null ? statistics : user.getStatistics())
-            .setLoreDust(statistics.getUser().getLoreDust())
+        user.setStatistics(user.getStatistics() == null ?
+            statistics :
+            user.getStatistics()
+                .setCorporationId(statistics.getCorporationId())
+                .setAchievementCount(statistics.getAchievementCount())
+                .setAchievementLogCount(statistics.getAchievementLogCount())
+                .setInventoryCount(statistics.getInventoryCount())
+                .setTradeCount(statistics.getTradeCount())
+                .setInventoryUniqueCount(statistics.getInventoryUniqueCount())
+                .setInventoryUniqueGoldenCount(statistics.getInventoryUniqueGoldenCount())
+                .setItemCount(statistics.getItemCount())
+                .setLuckyCount(statistics.getLuckyCount())
+                .setSubscribed(statistics.isSubscribed())
+        ).setLoreDust(statistics.getUser().getLoreDust())
             .setLoreFragment(statistics.getUser().getLoreFragment())
             .setBalance(statistics.getUser().getBalance())
             .setUpgradeDust(statistics.getUser().getUpgradeDust())

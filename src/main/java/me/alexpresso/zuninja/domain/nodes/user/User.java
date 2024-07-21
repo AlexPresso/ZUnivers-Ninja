@@ -1,5 +1,6 @@
 package me.alexpresso.zuninja.domain.nodes.user;
 
+import me.alexpresso.zuninja.classes.item.MoneyType;
 import me.alexpresso.zuninja.domain.base.BaseGraphObject;
 import me.alexpresso.zuninja.domain.relations.InventoryItem;
 import org.springframework.data.neo4j.core.schema.Node;
@@ -23,22 +24,6 @@ public class User extends BaseGraphObject {
     @Relationship(type = "INVENTORY_ITEM", direction = Relationship.Direction.OUTGOING)
     private Set<InventoryItem> inventory = new HashSet<>();
 
-
-    public String getDiscordId() {
-        return discordId;
-    }
-    public User setDiscordId(String discordId) {
-        this.discordId = discordId;
-        return this;
-    }
-
-    public String getDiscordUserName() {
-        return discordUserName;
-    }
-    public User setDiscordUserName(String discordUserName) {
-        this.discordUserName = discordUserName;
-        return this;
-    }
 
     public int getPosition() {
         return position;
@@ -101,5 +86,14 @@ public class User extends BaseGraphObject {
     public User setInventory(Set<InventoryItem> inventory) {
         this.inventory = inventory;
         return this;
+    }
+
+    public int getMoneyAmount(final MoneyType type) {
+        return switch(type) {
+            case BALANCE -> this.balance;
+            case LORE_DUST -> this.loreDust;
+            case LORE_FRAGMENT -> this.loreFragment;
+            case UPGRADE_DUST -> this.upgradeDust;
+        };
     }
 }

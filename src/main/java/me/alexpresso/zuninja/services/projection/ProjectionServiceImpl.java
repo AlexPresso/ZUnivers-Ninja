@@ -7,8 +7,10 @@ import me.alexpresso.zuninja.classes.config.Cost;
 import me.alexpresso.zuninja.classes.config.InvocationType;
 import me.alexpresso.zuninja.classes.config.Reward;
 import me.alexpresso.zuninja.classes.config.ShinyLevel;
+import me.alexpresso.zuninja.classes.corporation.Corporation;
 import me.alexpresso.zuninja.classes.item.InventoryType;
 import me.alexpresso.zuninja.classes.item.ItemEvolutionDetail;
+import me.alexpresso.zuninja.classes.item.MoneyType;
 import me.alexpresso.zuninja.classes.item.RarityType;
 import me.alexpresso.zuninja.classes.projection.*;
 import me.alexpresso.zuninja.classes.projection.action.*;
@@ -24,6 +26,7 @@ import me.alexpresso.zuninja.repositories.EventRepository;
 import me.alexpresso.zuninja.repositories.FusionRepository;
 import me.alexpresso.zuninja.repositories.ItemRepository;
 import me.alexpresso.zuninja.services.config.ConfigService;
+import me.alexpresso.zuninja.services.corporation.CorporationService;
 import me.alexpresso.zuninja.services.user.UserService;
 import me.alexpresso.zuninja.services.vortex.VortexService;
 import org.slf4j.Logger;
@@ -50,6 +53,7 @@ public class ProjectionServiceImpl implements ProjectionService {
     private final ItemRepository itemRepository;
     private final ConfigService configService;
     private final VortexService vortexService;
+    private final CorporationService corporationService;
     private final MemoryCache memoryCache;
 
     private final static int VORTEX_MAX = 6;
@@ -62,12 +66,14 @@ public class ProjectionServiceImpl implements ProjectionService {
                                  final MemoryCache mc,
                                  final ConfigService cs,
                                  final VortexService vs,
+                                 final CorporationService cps,
                                  final ItemRepository ir) {
         this.fusionRepository = fr;
         this.userService = us;
         this.eventRepository = er;
         this.memoryCache = mc;
         this.configService = cs;
+        this.corporationService = cps;
         this.vortexService = vs;
         this.itemRepository = ir;
     }
@@ -93,12 +99,16 @@ public class ProjectionServiceImpl implements ProjectionService {
             .filter(c -> c.getType().getActionType().isPresent())
             .filter(c -> c.getProgress().getCurrent() < c.getProgress().getMax())
             .collect(Collectors.toSet());
+        final var corporation = user.getStatistics().getCorporationId() != null ?
+            this.corporationService.fetchCorporation(user.getStatistics().getCorporationId()) :
+            new Corporation(); //to init bonus rewards = 0
 
         this.tryInitNewDay(discordTag);
 
         final var state = new ProjectionState(
             discordTag,
             user,
+            corporation.getCalculatedBonusValues(),
             activeEvents,
             vortexStats,
             vortexPack,
@@ -150,11 +160,12 @@ public class ProjectionServiceImpl implements ProjectionService {
     private void projectDaily(final ActionList actions, final ProjectionState state) {
         final var today = LocalDate.now();
         final var format = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+        final var rewardWithBonus = Reward.DAILY.getValue() + state.getCorporationBonusValues().get(MoneyType.BALANCE.getBonusType());
         var todayDaily = state.getDailyMap().getOrDefault(today.format(format), 0);
 
         if(todayDaily == 0) {
             this.addAction(state, actions, ActionType.DAILY, null);
-            state.getBalance().getAndAdd(Reward.DAILY.getValue());
+            state.getMoneyAmount(MoneyType.BALANCE).getAndAdd((int) rewardWithBonus);
             todayDaily += Reward.DAILY.getValue();
             state.getDailyMap().put(today.format(format), todayDaily);
         }
@@ -172,7 +183,7 @@ public class ProjectionServiceImpl implements ProjectionService {
             return;
 
         this.addAction(state, actions, ActionType.WEEKLY, null);
-        state.getBalance().getAndAdd(Reward.DAILY.getValue());
+        state.getMoneyAmount(MoneyType.BALANCE).getAndAdd((int) rewardWithBonus);
         state.getDailyMap().put(today.format(format), todayDaily + Reward.DAILY.getValue());
     }
 
@@ -224,9 +235,9 @@ public class ProjectionServiceImpl implements ProjectionService {
                     return;
 
                 final var cost = state.getConfigFor(item.getRarity(), ShinyLevel.GOLDEN).getCraftValue();
-                final var money = state.getMoneyFor(item);
+                final var moneyAmount = state.getMoneyAmount(state.getMoneyTypeFor(item));
 
-                if(money.get() < cost)
+                if(moneyAmount.get() < cost)
                     return;
 
                 try {
@@ -234,7 +245,7 @@ public class ProjectionServiceImpl implements ProjectionService {
                     this.produceItem(state, item, ShinyLevel.GOLDEN);
 
                     this.addAction(state, actions, ActionType.ENCHANT, iProj);
-                    money.getAndAdd(-cost);
+                    moneyAmount.getAndAdd(-cost);
                     iProj.getCountProjection().updateCount(ActionType.ENCHANT, 1);
                 } catch (ProjectionException e) {
                     logger.error(e.getMessage());
@@ -262,6 +273,8 @@ public class ProjectionServiceImpl implements ProjectionService {
             put(InvocationType.STAR, ownedStarCount < state.getPoolStarItemsCount());
         }};
 
+        final var balance = state.getMoneyAmount(MoneyType.BALANCE);
+
         shouldInvokeMap.forEach((type, should) -> {
             if(!should)
                 return;
@@ -270,11 +283,11 @@ public class ProjectionServiceImpl implements ProjectionService {
                 state.getActiveEvents().forEach(e -> {
                     if(e.isOneTime() && todayInvocations.contains(e.getIdentifier()))
                         return;
-                    if(state.getBalance().get() < e.getBalanceCost())
+                    if(balance.get() < e.getBalanceCost())
                         return;
 
                     this.addAction(state, actions, ActionType.INVOCATION, e);
-                    state.getBalance().addAndGet(-e.getBalanceCost());
+                    balance.addAndGet(-e.getBalanceCost());
 
                     todayInvocations.add(e.getIdentifier());
                     hadCost.set(e.getBalanceCost() > 0);
@@ -286,9 +299,9 @@ public class ProjectionServiceImpl implements ProjectionService {
                     return;
             }
 
-            if(state.getBalance().get() >= type.getCost()) {
+            if(balance.get() >= type.getCost()) {
                 this.addAction(state, actions, ActionType.INVOCATION, type);
-                state.getBalance().getAndAdd(-type.getCost());
+                balance.getAndAdd(-type.getCost());
             }
         });
     }
@@ -301,12 +314,13 @@ public class ProjectionServiceImpl implements ProjectionService {
         final var totalAchievable = stats
             .map(s -> (s.getTotalAchievable(now) + 1) * PER_DAY_ASCENSIONS)
             .orElse((long) PER_DAY_ASCENSIONS);
+        final var loreDust = state.getMoneyAmount(MoneyType.LORE_DUST);
 
-        if(state.getLoreDust().get() < Cost.ASCENSION.getValue() || floor >= VORTEX_MAX || state.getAscensionsCount().get() >= totalAchievable)
+        if(loreDust.get() < Cost.ASCENSION.getValue() || floor >= VORTEX_MAX || state.getAscensionsCount().get() >= totalAchievable)
             return;
 
         this.addAction(state, actions, ActionType.ASCENSION, null);
-        state.getLoreDust().getAndAdd(-Cost.ASCENSION.getValue());
+        loreDust.getAndAdd(-Cost.ASCENSION.getValue());
         state.getAscensionsCount().getAndIncrement();
     }
 
@@ -326,10 +340,11 @@ public class ProjectionServiceImpl implements ProjectionService {
 
         final var nextItem = evolutionDetail.getItems().get(currentItemIndex.get() + 1);
         final var cost = evolutionDetail.getUpgradeCosts().get(evolutionDetail.getItems().indexOf(nextItem) - 1);
-        if(state.getUpgradeDust().get() < cost)
+        final var upgradeDust = state.getMoneyAmount(MoneyType.UPGRADE_DUST);
+        if(upgradeDust.get() < cost)
             return;
 
-        state.getUpgradeDust().getAndAdd(-cost);
+        upgradeDust.getAndAdd(-cost);
         nextItem.setOwned(true);
         this.addAction(state, actions, ActionType.EVOLUTION, nextItem.getItem());
     }
@@ -346,13 +361,13 @@ public class ProjectionServiceImpl implements ProjectionService {
 
         final var ownedQuantity = state.getInventoryProjection().getQuantity(inventory, i);
         final var cost = state.getConfigFor(i.getRarity(), ShinyLevel.NORMAL).getCraftValue();
-        final var money = state.getMoneyFor(i);
+        final var moneyAmount = state.getMoneyAmount(state.getMoneyTypeFor(i));
 
-        if(ownedQuantity >= state.getInventoryProjection().getCountProjection(inventory, i, ShinyLevel.NORMAL).getTotalNeeded() || money.get() < cost)
+        if(ownedQuantity >= state.getInventoryProjection().getCountProjection(inventory, i, ShinyLevel.NORMAL).getTotalNeeded() || moneyAmount.get() < cost)
             return;
 
         this.produceItem(state, i, ShinyLevel.NORMAL);
-        money.getAndAdd(-cost);
+        moneyAmount.getAndAdd(-cost);
         this.addAction(state, actions, ActionType.CRAFT, i);
     }
 
@@ -370,13 +385,18 @@ public class ProjectionServiceImpl implements ProjectionService {
             if(iProj.getQuantity() <= countProjection.getTotalNeeded())
                 return;
 
-            final var money = state.getMoneyFor(iProj.getItem());
-            final var recycleValue = state.getConfigFor(iProj.getItem().getRarity(), shinyLevel).getRecycleValue();
+            final var moneyType = state.getMoneyTypeFor(iProj.getItem());
+            final var moneyAmount = state.getMoneyAmount(moneyType);
+
+            var recycleValue = state.getConfigFor(iProj.getItem().getRarity(), shinyLevel).getRecycleValue();
+            if(state.getCorporationBonusValues().get(moneyType.getBonusType()) > 0)
+                recycleValue += (int) (recycleValue * state.getCorporationBonusValues().get(moneyType.getBonusType()));
+
             final var count = iProj.getQuantity() - countProjection.getTotalNeeded();
 
             try {
                 this.consumeItem(state, iProj.getItem(), count , shinyLevel);
-                money.getAndAdd(recycleValue * count);
+                moneyAmount.getAndAdd(recycleValue * count);
                 toRecycle.add(new ShinyElement(iProj.getItem(), shinyLevel), count);
             } catch (ProjectionException e) {
                 logger.error(e.getMessage());
@@ -391,6 +411,7 @@ public class ProjectionServiceImpl implements ProjectionService {
         final var toUpgrade = new ActionElementList();
         final var inventory = state.getInventoryProjection().getInventory(InventoryType.CLASSIC, shinyLevel);
         final var upgradeInventory = state.getInventoryProjection().getInventory(InventoryType.UPGRADE, shinyLevel);
+        final var upgradeDust = state.getMoneyAmount(MoneyType.UPGRADE_DUST);
 
         inventory.values().forEach(iProj -> {
             if(!iProj.getItem().isUpgradable() || iProj.getQuantity() <= ItemCountProjection.NEEDED_BASE)
@@ -402,7 +423,7 @@ public class ProjectionServiceImpl implements ProjectionService {
 
                 if(upgradeProj.getUpgradeLevel() > 1) {
                     this.consumeItem(state, iProj.getItem(), shinyLevel);
-                    state.getUpgradeDust().getAndIncrement();
+                    upgradeDust.getAndIncrement();
                     upgradeProj.decreaseLevel();
                     toUpgrade.add(new ShinyElement(iProj.getItem(), shinyLevel));
                     iProj.getCountProjection().updateCount(ActionType.CONSTELLATION, 1);
@@ -492,6 +513,7 @@ public class ProjectionServiceImpl implements ProjectionService {
         if(state.getChallenges().isEmpty())
             return;
 
+        final var loreDust = state.getMoneyAmount(MoneyType.LORE_DUST);
         state.getChallenges().stream()
             .filter(c -> c.getType().getActionType().isPresent() && c.getType().getActionType().get().equals(type))
             .filter(c -> c.getProgress().getCurrent() < c.getProgress().getMax())
@@ -500,7 +522,7 @@ public class ProjectionServiceImpl implements ProjectionService {
                 progress.setCurrent(progress.getCurrent() + quantity);
 
                 if(progress.getCurrent() >= progress.getMax())
-                    state.getLoreDust().getAndAdd(c.getRewardLoreDust());
+                    loreDust.getAndAdd(c.getRewardLoreDust());
             });
     }
     private int getProgress(final ProjectionState state,
@@ -509,8 +531,8 @@ public class ProjectionServiceImpl implements ProjectionService {
         return switch(type) {
             case RECYCLE -> ((ActionElementList) element).stream()
                 .map(ShinyElement.class::cast)
-                .filter(e -> e.getItem().getPack().getName().equalsIgnoreCase("classique"))
-                .map(e -> state.getConfigFor(e.getItem().getRarity(), e.getShinyLevel()).getRecycleValue())
+                .filter(e -> e.item().getPack().getName().equalsIgnoreCase("classique"))
+                .map(e -> state.getConfigFor(e.item().getRarity(), e.shinyLevel()).getRecycleValue())
                 .reduce(0, Integer::sum);
             case INVOCATION -> 10;
             default -> 1;
@@ -536,10 +558,13 @@ public class ProjectionServiceImpl implements ProjectionService {
         final var stateChallenges = state.getChallenges().stream()
             .collect(Collectors.toMap(Challenge::getId, Function.identity()));
 
-        summary.put(SummaryType.MONEY, "Poudre créatrice", new Change(user.getLoreDust(), state.getLoreDust().get()));
-        summary.put(SummaryType.MONEY, "Cristaux d'histoire", new Change(user.getLoreFragment(), state.getLoreFragment().get()));
-        summary.put(SummaryType.MONEY, "Eclats d'étoile", new Change(user.getUpgradeDust(), state.getUpgradeDust().get()));
-        summary.put(SummaryType.MONEY, "Z Monnaie", new Change(user.getBalance(), state.getBalance().get()));
+        for(final var moneyType : MoneyType.values()) {
+            summary.put(
+                SummaryType.MONEY,
+                moneyType.getName(),
+                new Change(user.getMoneyAmount(moneyType), state.getMoneyAmount(moneyType))
+            );
+        }
 
         state.getInventoryProjection().getAllInventories()
             .forEach(i -> summary.put(
