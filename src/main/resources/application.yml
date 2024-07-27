@@ -6,6 +6,7 @@ spring.neo4j:
 
 toolkit:
   discordTags: ${DISCORD_TAGS:alexpresso}
+  gameMode: NORMAL
   runAutomatedTasks: ${RUN_AUTOMATED_TASKS:false}
 
 zunivers:
