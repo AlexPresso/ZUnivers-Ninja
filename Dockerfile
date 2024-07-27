@@ -8,4 +8,5 @@ WORKDIR /app
 ARG VERSION
 COPY "target/zunivers-ninja-${VERSION}-exec.jar" app.jar
 
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENV JAVA_OPTS="-Duser.timezone=Europe/Paris"
+ENTRYPOINT ["sh", "-c", "java ${JAVA_OPTS} -jar app.jar"]
