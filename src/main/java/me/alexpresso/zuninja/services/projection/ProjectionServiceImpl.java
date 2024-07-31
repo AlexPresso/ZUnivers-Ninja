@@ -160,12 +160,14 @@ public class ProjectionServiceImpl implements ProjectionService {
     private void projectDaily(final ActionList actions, final ProjectionState state) {
         final var today = LocalDate.now();
         final var format = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-        final var rewardWithBonus = Reward.DAILY.getValue() + state.getCorporationBonusValues().get(MoneyType.BALANCE.getBonusType());
+        final var balanceRewardWithBonus = Reward.DAILY.getValue() + state.getCorporationBonusValues().get(MoneyType.BALANCE.getBonusType());
+        final var loreDustReward = 10;
         var todayDaily = state.getDailyMap().getOrDefault(today.format(format), 0);
 
         if(todayDaily == 0) {
             this.addAction(state, actions, ActionType.DAILY, null);
-            state.getMoneyAmount(MoneyType.BALANCE).getAndAdd((int) rewardWithBonus);
+            state.getMoneyAmount(MoneyType.BALANCE).getAndAdd((int) balanceRewardWithBonus);
+            state.getMoneyAmount(MoneyType.LORE_DUST).getAndAdd(loreDustReward);
             todayDaily += Reward.DAILY.getValue();
             state.getDailyMap().put(today.format(format), todayDaily);
         }
@@ -183,7 +185,8 @@ public class ProjectionServiceImpl implements ProjectionService {
             return;
 
         this.addAction(state, actions, ActionType.WEEKLY, null);
-        state.getMoneyAmount(MoneyType.BALANCE).getAndAdd((int) rewardWithBonus);
+        state.getMoneyAmount(MoneyType.BALANCE).getAndAdd((int) balanceRewardWithBonus);
+        state.getMoneyAmount(MoneyType.LORE_DUST).getAndAdd(loreDustReward);
         state.getDailyMap().put(today.format(format), todayDaily + Reward.DAILY.getValue());
     }
 
@@ -562,7 +565,7 @@ public class ProjectionServiceImpl implements ProjectionService {
             summary.put(
                 SummaryType.MONEY,
                 moneyType.getName(),
-                new Change(user.getMoneyAmount(moneyType), state.getMoneyAmount(moneyType))
+                new Change(user.getMoneyAmount(moneyType), state.getMoneyAmount(moneyType).get())
             );
         }
 
