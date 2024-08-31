@@ -12,7 +12,7 @@ import java.util.stream.Collectors;
 
 public class InventoryProjection {
 
-    private final Map<InventoryType, Map<ShinyLevel, Inventory>> inventories;
+    private final Map<InventoryType, EnumMap<ShinyLevel, Inventory>> inventories;
 
     public InventoryProjection(final User user) {
         this.inventories = new ConcurrentHashMap<>();
@@ -40,12 +40,9 @@ public class InventoryProjection {
     }
 
     public Inventory getInventory(final InventoryType type, final ShinyLevel shinyLevel) {
-        this.inventories.computeIfAbsent(type, k -> new HashMap<>());
-        this.inventories.get(type).computeIfAbsent(shinyLevel, k -> new Inventory(type, shinyLevel));
-
         return this.inventories
-            .get(type)
-            .get(shinyLevel);
+            .computeIfAbsent(type, k -> new EnumMap<>(ShinyLevel.class))
+            .computeIfAbsent(shinyLevel, k -> new Inventory(type, shinyLevel));
     }
 
     public long getInventoryCount(final InventoryType type, final ShinyLevel shinyLevel) {
@@ -72,11 +69,9 @@ public class InventoryProjection {
     }
 
     public ItemCountProjection getCountProjection(final Map<String, ItemProjection> inventory, final Item item, final ShinyLevel shinyLevel) {
-        if(inventory.containsKey(item.getId()))
-            return inventory.get(item.getId()).getCountProjection();
-
-        final var itemProjection = new ItemProjection(item, 0, 0, this, shinyLevel);
-        inventory.put(item.getId(), itemProjection);
-        return itemProjection.getCountProjection();
+        return inventory.computeIfAbsent(
+            item.getId(),
+            id -> new ItemProjection(item, 0, 0, this, shinyLevel)
+        ).getCountProjection();
     }
 }
