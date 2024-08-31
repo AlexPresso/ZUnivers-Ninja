@@ -2,8 +2,8 @@ package me.alexpresso.zuninja.classes.projection.action;
 
 public enum ActionType {
     RECYCLE("recyclage", true),
-    CRAFT("création"),
-    ENCHANT("enchantement"),
+    CRAFT("création", true),
+    ENCHANT("enchantement", true),
     FUSION("fusion"),
     INVOCATION("im"),
     ASCENSION("as"),

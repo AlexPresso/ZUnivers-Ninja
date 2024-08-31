@@ -58,6 +58,7 @@ public class ProjectionServiceImpl implements ProjectionService {
 
     private final static int VORTEX_MAX = 6;
     private final static int PER_DAY_ASCENSIONS = 2;
+    private final static int BONUS_CONSECUTIVE_DAYS = 7;
 
 
     public ProjectionServiceImpl(final FusionRepository fr,
@@ -122,7 +123,9 @@ public class ProjectionServiceImpl implements ProjectionService {
             evolution
         );
 
-        this.recursiveProjection(actions, state);
+        while(actions.hasChanged()) {
+            this.projectionCycle(actions.newCycle(), state);
+        }
 
         return this.makeSummary(actions, user, state, discordTag);
     }
@@ -138,7 +141,7 @@ public class ProjectionServiceImpl implements ProjectionService {
         this.memoryCache.put(CacheEntry.LAST_ADVICE_DATE, today);
     }
 
-    private void recursiveProjection(final ActionList actions, final ProjectionState state) {
+    private void projectionCycle(final ActionList actions, final ProjectionState state) {
         this.projectDaily(actions, state);
         this.projectRecycle(actions, state, ShinyLevel.NORMAL);
         this.projectRecycle(actions, state, ShinyLevel.GOLDEN);
@@ -151,16 +154,14 @@ public class ProjectionServiceImpl implements ProjectionService {
         this.projectCraft(actions, state);
         this.projectAscension(actions, state);
         this.projectEvolution(actions, state);
-
-        if(actions.hasChanged())
-            this.recursiveProjection(actions.newCycle(), state);
     }
 
 
     private void projectDaily(final ActionList actions, final ProjectionState state) {
         final var today = LocalDate.now();
         final var format = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-        final var balanceRewardWithBonus = Reward.DAILY.getValue() + state.getCorporationBonusValues().get(MoneyType.BALANCE.getBonusType());
+        final var dailyDefaultReward = state.getSubscribed().get() ? Reward.DAILY_SUB.getValue() : Reward.DAILY.getValue();
+        final var balanceRewardWithBonus = dailyDefaultReward + state.getCorporationBonusValues().get(MoneyType.BALANCE.getBonusType());
         final var loreDustReward = 10;
         var todayDaily = state.getDailyMap().getOrDefault(today.format(format), 0);
 
@@ -172,16 +173,18 @@ public class ProjectionServiceImpl implements ProjectionService {
             state.getDailyMap().put(today.format(format), todayDaily);
         }
 
-        var consecutives = 0;
+        var consecutive = 0;
         for(final var daily : state.getDailyMap().entrySet()) {
-            if(daily.getValue() == Reward.DAILY.getValue() || daily.getValue() == Reward.DAILY_SUB.getValue())
-                consecutives++;
+            final var receivedBalance = daily.getValue();
 
-            if(daily.getValue() >= (2 * Reward.DAILY.getValue()))
+            //break if didn't receive balance (aka no !journa) OR received balance (more) than two time that day (aka. received bonus)
+            if(receivedBalance == 0 || receivedBalance / 2 >= Reward.DAILY.getValue() || receivedBalance / 2 >= Reward.DAILY_SUB.getValue())
                 break;
+
+            consecutive++;
         }
 
-        if(consecutives < 7)
+        if(consecutive < BONUS_CONSECUTIVE_DAYS)
             return;
 
         this.addAction(state, actions, ActionType.WEEKLY, null);
@@ -269,7 +272,7 @@ public class ProjectionServiceImpl implements ProjectionService {
             RarityType.STAR.ordinal()
         );
 
-        final var shouldInvokeMap = new HashMap<InvocationType, Boolean>() {{
+        final var shouldInvokeMap = new EnumMap<InvocationType, Boolean>(InvocationType.class) {{
             put(InvocationType.BASIC, ownedNormalCount < state.getPoolNormalItemsCount());
             put(InvocationType.GOLDEN, ownedGoldenCount < state.getPoolNormalItemsCount());
             put(InvocationType.CHROMA, ownedChromaCount < state.getPoolNormalItemsCount());
@@ -355,7 +358,9 @@ public class ProjectionServiceImpl implements ProjectionService {
 
     private void projectCraft(final ActionList actions, final ProjectionState state) {
         final var inventory = state.getInventoryProjection().getInventory(InventoryType.CLASSIC, ShinyLevel.NORMAL);
-        state.getAllItems().forEach(i -> this.tryCraft(actions, i, inventory, state));
+        for(final var item : state.getAllItems()) {
+            this.tryCraft(actions, item, inventory, state);
+        }
     }
 
     private void tryCraft(final ActionList actions, final Item i, final Map<String, ItemProjection> inventory, final ProjectionState state) {
@@ -379,14 +384,14 @@ public class ProjectionServiceImpl implements ProjectionService {
         final var toRecycle = new ActionElementList();
         final var inventory = state.getInventoryProjection().getInventory(InventoryType.CLASSIC, shinyLevel);
 
-        inventory.values().forEach(iProj -> {
+        for(final var iProj : inventory.values()) {
             if(!iProj.getItem().isRecyclable() || iProj.getQuantity() <= ItemCountProjection.NEEDED_BASE)
-                return;
+                continue;
 
             final var countProjection = state.getInventoryProjection().getCountProjection(inventory, iProj.getItem(), shinyLevel);
 
             if(iProj.getQuantity() <= countProjection.getTotalNeeded())
-                return;
+                continue;
 
             final var moneyType = state.getMoneyTypeFor(iProj.getItem());
             final var moneyAmount = state.getMoneyAmount(moneyType);
@@ -404,7 +409,7 @@ public class ProjectionServiceImpl implements ProjectionService {
             } catch (ProjectionException e) {
                 logger.error(e.getMessage());
             }
-        });
+        }
 
         if(!toRecycle.isEmpty())
             this.addAction(state, actions, ActionType.RECYCLE, toRecycle);
@@ -416,9 +421,9 @@ public class ProjectionServiceImpl implements ProjectionService {
         final var upgradeInventory = state.getInventoryProjection().getInventory(InventoryType.UPGRADE, shinyLevel);
         final var upgradeDust = state.getMoneyAmount(MoneyType.UPGRADE_DUST);
 
-        inventory.values().forEach(iProj -> {
+        for(final var iProj : inventory.values()) {
             if(!iProj.getItem().isUpgradable() || iProj.getQuantity() <= ItemCountProjection.NEEDED_BASE)
-                return;
+                continue;
 
             try {
                 final var upgradeProj = Optional.ofNullable(upgradeInventory.getOrDefault(iProj.getItem().getId(), null))
@@ -434,7 +439,7 @@ public class ProjectionServiceImpl implements ProjectionService {
             } catch (ProjectionException e) {
                 logger.error(e.getMessage());
             }
-        });
+        }
 
         if(!toUpgrade.isEmpty())
             this.addAction(state, actions, ActionType.CONSTELLATION, toUpgrade);

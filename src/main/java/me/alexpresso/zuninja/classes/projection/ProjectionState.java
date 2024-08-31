@@ -20,9 +20,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class ProjectionState {
 
     private final String discordTag;
-    private final Map<CorporationBonusType, Double> corporationBonusValues;
+    private final EnumMap<CorporationBonusType, Double> corporationBonusValues;
     private final InventoryProjection inventory;
-    private final Map<MoneyType, AtomicInteger> moneys = new HashMap<>();
+    private final EnumMap<MoneyType, AtomicInteger> moneys;
     private final VortexStats vortexStats;
     private final String vortexPack;
     private final AtomicInteger ascensionsCount;
@@ -40,7 +40,7 @@ public class ProjectionState {
 
     public ProjectionState(final String discordTag,
                            final User user,
-                           final Map<CorporationBonusType, Double> corporationBonusValues,
+                           final EnumMap<CorporationBonusType, Double> corporationBonusValues,
                            final Set<Event> activeEvents,
                            final VortexStats vortexStats,
                            final String vortexPack,
@@ -56,6 +56,7 @@ public class ProjectionState {
         this.corporationBonusValues = corporationBonusValues;
         this.inventory = new InventoryProjection(user);
 
+        this.moneys = new EnumMap<>(MoneyType.class);
         for(final var type : MoneyType.values()) {
             this.moneys.put(type, new AtomicInteger(user.getMoneyAmount(type)));
         }
@@ -79,7 +80,7 @@ public class ProjectionState {
         return this.discordTag;
     }
 
-    public Map<CorporationBonusType, Double> getCorporationBonusValues() {
+    public EnumMap<CorporationBonusType, Double> getCorporationBonusValues() {
         return this.corporationBonusValues;
     }
 

@@ -8,7 +8,7 @@ public class ActionList extends ArrayList<Action> {
 
     public ActionList() {
         super();
-        this.changed = false;
+        this.changed = true;
     }
 
 

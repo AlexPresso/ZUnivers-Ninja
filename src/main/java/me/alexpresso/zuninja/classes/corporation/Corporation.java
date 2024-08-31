@@ -3,7 +3,7 @@ package me.alexpresso.zuninja.classes.corporation;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import java.util.HashMap;
+import java.util.EnumMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
@@ -21,8 +21,8 @@ public class Corporation {
             .collect(Collectors.toMap(CorporationBonus::getType, Function.identity()));
     }
 
-    public Map<CorporationBonusType, Double> getCalculatedBonusValues() {
-        final var bonusValues = new HashMap<CorporationBonusType, Double>();
+    public EnumMap<CorporationBonusType, Double> getCalculatedBonusValues() {
+        final var bonusValues = new EnumMap<CorporationBonusType, Double>(CorporationBonusType.class);
 
         for(final var type : CorporationBonusType.values()) {
             if(this.corporationBonuses == null || !corporationBonuses.containsKey(type)) {
