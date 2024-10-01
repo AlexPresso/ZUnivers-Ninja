@@ -14,7 +14,10 @@ public class ActionElementList extends ArrayList<ActionElement> implements Actio
     @Override
     public String getIdentifier() {
         return this.stream()
-            .map(ActionElement::getIdentifier)
+            .collect(Collectors.groupingBy(ActionElement::getIdentifier, Collectors.counting()))
+            .entrySet()
+            .stream()
+            .map(e -> e.getValue() == 1 ? e.getKey() : String.format("%s*%s", e.getKey(), e.getValue()))
             .collect(Collectors.joining(" + "));
     }
 }
