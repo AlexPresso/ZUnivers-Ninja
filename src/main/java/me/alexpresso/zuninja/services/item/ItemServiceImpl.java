@@ -1,7 +1,6 @@
 package me.alexpresso.zuninja.services.item;
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import me.alexpresso.zuninja.classes.item.ItemDetail;
 import me.alexpresso.zuninja.domain.nodes.item.Fusion;
 import me.alexpresso.zuninja.domain.nodes.item.Item;
 import me.alexpresso.zuninja.domain.nodes.item.Pack;
@@ -47,11 +46,6 @@ public class ItemServiceImpl implements ItemService {
     }
 
     @Override
-    public ItemDetail fetchItemDetail(final Item item) throws IOException, InterruptedException {
-        return (ItemDetail) this.requestService.request(String.format("/public/item/%s", item.getSlug()), "GET", new TypeReference<ItemDetail>(){});
-    }
-
-    @Override
     public List<Item> getItems() {
         return this.itemRepository.findAll();
     }
@@ -73,21 +67,19 @@ public class ItemServiceImpl implements ItemService {
 
         items.parallelStream().forEach(item -> {
             try {
-                final var detail = this.fetchItemDetail(item);
-
                 dbItems.put(item.getId(), dbItems.getOrDefault(item.getId(), item)
                     .setPack(packs.get(item.getPack().getId()))
                     .setGenre(item.getGenre())
                     .setName(item.getName())
                     .setRarity(item.getRarity())
                     .setSlug(item.getSlug())
-                    .setCounting(detail.isCounting())
-                    .setCraftable(detail.isCraftable())
-                    .setInvocable(detail.isInvocable())
-                    .setRecyclable(detail.isRecyclable())
-                    .setTradable(detail.isTradable())
-                    .setGoldable(detail.isGoldable())
-                    .setUpgradable(detail.isUpgradable())
+                    .setCounting(item.isCounting())
+                    .setCraftable(item.isCraftable())
+                    .setInvocable(item.isInvocable())
+                    .setRecyclable(item.isRecyclable())
+                    .setTradable(item.isTradable())
+                    .setGoldable(item.isGoldable())
+                    .setUpgradable(item.isUpgradable())
                 );
 
                 logger.info("({}/{}) Updated {} ", count.getAndIncrement(), items.size(), item.getName());
