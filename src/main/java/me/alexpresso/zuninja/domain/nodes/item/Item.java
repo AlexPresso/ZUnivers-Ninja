@@ -31,12 +31,19 @@ public class Item extends BaseGraphObject implements ActionElement {
     private Set<String> urls;
     private int score;
     private int scoreGolden;
+    @JsonProperty("isCounting")
     private boolean counting;
+    @JsonProperty("isCraftable")
     private boolean craftable;
+    @JsonProperty("isInvocable")
     private boolean invocable;
+    @JsonProperty("isRecyclable")
     private boolean recyclable;
+    @JsonProperty("isTradable")
     private boolean tradable;
+    @JsonProperty("isGoldable")
     private boolean goldable;
+    @JsonProperty("isUpgradable")
     private boolean upgradable;
 
 
