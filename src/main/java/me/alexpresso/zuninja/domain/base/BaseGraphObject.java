@@ -18,4 +18,8 @@ public class BaseGraphObject {
     public String getId() {
         return this.id;
     }
+    public BaseGraphObject setId(String id) {
+        this.id = id;
+        return this;
+    }
 }
