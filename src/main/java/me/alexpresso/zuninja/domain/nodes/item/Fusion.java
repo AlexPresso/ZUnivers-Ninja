@@ -18,7 +18,6 @@ import java.util.stream.Collectors;
 public class Fusion extends BaseGraphObject {
     @Relationship(type = "FUSION_INPUT", direction = Relationship.Direction.INCOMING)
     private Set<FusionToInput> inputs = new HashSet<>();
-    @JsonProperty("item")
     @Relationship(type = "FUSION_RESULT", direction = Relationship.Direction.OUTGOING)
     private Item result;
 
@@ -57,5 +56,11 @@ public class Fusion extends BaseGraphObject {
     public Fusion setResult(final Item item) {
         this.result = item;
         return this;
+    }
+
+    @JsonProperty("item")
+    public void unpackResultItem(final Item item) {
+        this.result = item;
+        this.setId(item.getId());
     }
 }

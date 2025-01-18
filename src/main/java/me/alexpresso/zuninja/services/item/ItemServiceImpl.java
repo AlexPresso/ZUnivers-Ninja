@@ -110,10 +110,10 @@ public class ItemServiceImpl implements ItemService {
 
         final var fusions = this.fetchFusions();
         final var dbFusions = this.getFusions().stream()
-            .collect(Collectors.toMap(f -> f.getResult().getId(), Function.identity()));
+            .collect(Collectors.toMap(Fusion::getId, Function.identity()));
 
-        fusions.forEach(f -> dbFusions.put(f.getResult().getId(), dbFusions.getOrDefault(f.getResult().getId(), f)
-            .setResult(items.getOrDefault(f.getResult().getId(), f.getResult()))
+        fusions.forEach(f -> dbFusions.put(f.getId(), dbFusions.getOrDefault(f.getId(), f)
+            .setResult(items.get(f.getId()))
             .setInputs(f.getInputs().stream()
                 .collect(Collectors.toMap(in -> items.get(in.getItem().getId()), FusionToInput::getQuantity))
             )
