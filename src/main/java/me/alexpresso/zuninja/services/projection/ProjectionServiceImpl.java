@@ -1,5 +1,7 @@
 package me.alexpresso.zuninja.services.projection;
 
+import me.alexpresso.zuninja.classes.activity.Loot;
+import me.alexpresso.zuninja.classes.activity.LootType;
 import me.alexpresso.zuninja.classes.cache.CacheEntry;
 import me.alexpresso.zuninja.classes.cache.MemoryCache;
 import me.alexpresso.zuninja.classes.challenge.Challenge;
@@ -160,25 +162,34 @@ public class ProjectionServiceImpl implements ProjectionService {
     private void projectDaily(final ActionList actions, final ProjectionState state) {
         final var today = LocalDate.now();
         final var format = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-        final var dailyDefaultReward = state.getSubscribed().get() ? Reward.DAILY_SUB.getValue() : Reward.DAILY.getValue();
-        final var balanceRewardWithBonus = dailyDefaultReward + state.getCorporationBonusValues().get(MoneyType.BALANCE.getBonusType());
         final var loreDustReward = 10;
-        var todayDaily = state.getDailyMap().getOrDefault(today.format(format), 0);
+        final var todayLoots = state.getDailyMap().getOrDefault(today.format(format), Set.of());
 
-        if(todayDaily == 0) {
+        if(todayLoots.isEmpty()) {
             this.addAction(state, actions, ActionType.DAILY, null);
-            state.getMoneyAmount(MoneyType.BALANCE).getAndAdd((int) balanceRewardWithBonus);
+
+            final var loot = new Loot(
+                LootType.DAILY,
+                state.getCorporationBonusValues().get(MoneyType.BALANCE.getBonusType()).intValue(),
+                state.getSubscribed().get()
+            );
+
+            state.getMoneyAmount(MoneyType.BALANCE).getAndAdd(loot.getAmount());
             state.getMoneyAmount(MoneyType.LORE_DUST).getAndAdd(loreDustReward);
-            todayDaily += Reward.DAILY.getValue();
-            state.getDailyMap().put(today.format(format), todayDaily);
+
+            todayLoots.add(loot);
         }
 
         var consecutive = 0;
-        for(final var daily : state.getDailyMap().entrySet()) {
-            final var receivedBalance = daily.getValue();
 
-            //break if didn't receive balance (aka no !journa) OR received balance (more) than two time that day (aka. received bonus)
-            if(receivedBalance == 0 || receivedBalance / 2 >= Reward.DAILY.getValue() || receivedBalance / 2 >= Reward.DAILY_SUB.getValue())
+        final var last7Loots = state.getDailyMap().entrySet().stream()
+            .sorted(Map.Entry.<String, Set<Loot>>comparingByKey().reversed())
+            .limit(7)
+            .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+
+        for(final var daily : last7Loots.entrySet()) {
+            //Checks already got bonus today or not
+            if(daily.getValue().stream().anyMatch(l -> l.getType() == LootType.WEEKLY))
                 break;
 
             consecutive++;
@@ -187,10 +198,18 @@ public class ProjectionServiceImpl implements ProjectionService {
         if(consecutive < BONUS_CONSECUTIVE_DAYS)
             return;
 
+        final var bonusLoot = new Loot(
+            LootType.WEEKLY,
+            state.getCorporationBonusValues().get(MoneyType.BALANCE.getBonusType()).intValue(),
+            state.getSubscribed().get()
+        );
+
         this.addAction(state, actions, ActionType.WEEKLY, null);
-        state.getMoneyAmount(MoneyType.BALANCE).getAndAdd((int) balanceRewardWithBonus);
+
+        state.getMoneyAmount(MoneyType.BALANCE).getAndAdd(bonusLoot.getAmount());
         state.getMoneyAmount(MoneyType.LORE_DUST).getAndAdd(loreDustReward);
-        state.getDailyMap().put(today.format(format), todayDaily + Reward.DAILY.getValue());
+
+        todayLoots.add(bonusLoot);
     }
 
     private void projectFusions(final ActionList actions, final ProjectionState state, final ShinyLevel shinyLevel) {

@@ -1,5 +1,6 @@
 package me.alexpresso.zuninja.services.user;
 
+import me.alexpresso.zuninja.classes.activity.Loot;
 import me.alexpresso.zuninja.classes.challenge.Challenge;
 import me.alexpresso.zuninja.classes.item.EvolutionDetail;
 import me.alexpresso.zuninja.domain.nodes.user.User;
@@ -25,5 +26,5 @@ public interface UserService {
 
     Set<Challenge> fetchUserChallenges(String discordTag) throws IOException, InterruptedException;
 
-    Map<String, Integer> fetchLootActivity(String discordTag) throws IOException, InterruptedException;
+    Map<String, Set<Loot>> fetchLootActivity(String discordTag) throws IOException, InterruptedException;
 }

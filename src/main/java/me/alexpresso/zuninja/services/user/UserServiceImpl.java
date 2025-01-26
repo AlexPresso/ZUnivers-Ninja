@@ -1,7 +1,7 @@
 package me.alexpresso.zuninja.services.user;
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import me.alexpresso.zuninja.classes.activity.ActivityDetail;
+import me.alexpresso.zuninja.classes.activity.Loot;
 import me.alexpresso.zuninja.classes.challenge.Challenge;
 import me.alexpresso.zuninja.classes.config.ShinyLevel;
 import me.alexpresso.zuninja.classes.item.EvolutionDetail;
@@ -143,13 +143,11 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public Map<String, Integer> fetchLootActivity(final String discordTag) throws IOException, InterruptedException {
-        final var activity = (ActivityDetail) this.requestService.request(
+    public Map<String, Set<Loot>> fetchLootActivity(final String discordTag) throws IOException, InterruptedException {
+        return (Map<String, Set<Loot>>) this.requestService.request(
             String.format("/public/loot/%s?year=0", URLEncoder.encode(discordTag, StandardCharsets.UTF_8)),
             "GET",
-            new TypeReference<ActivityDetail>() {}
+            new TypeReference<Map<String, Set<Loot>>>() {}
         );
-
-        return activity.getLootInfos();
     }
 }
