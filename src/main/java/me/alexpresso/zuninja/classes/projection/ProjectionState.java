@@ -1,5 +1,6 @@
 package me.alexpresso.zuninja.classes.projection;
 
+import me.alexpresso.zuninja.classes.activity.Loot;
 import me.alexpresso.zuninja.classes.challenge.Challenge;
 import me.alexpresso.zuninja.classes.config.Config;
 import me.alexpresso.zuninja.classes.config.ConfigPart;
@@ -34,7 +35,7 @@ public class ProjectionState {
     private final Config config;
     private final AtomicBoolean subscribed;
     private final Set<Challenge> challenges;
-    private final Map<String, Integer> dailyMap;
+    private final Map<String, Set<Loot>> dailyMap;
     private final EvolutionDetail evolutionDetail;
 
 
@@ -50,7 +51,7 @@ public class ProjectionState {
                            final Long poolStarItemsCount,
                            final Config config,
                            final Set<Challenge> challenges,
-                           final Map<String, Integer> dailyMap,
+                           final Map<String, Set<Loot>> dailyMap,
                            final EvolutionDetail evolutionDetail) {
         this.discordTag = discordTag;
         this.corporationBonusValues = corporationBonusValues;
@@ -143,7 +144,7 @@ public class ProjectionState {
         return this.challenges;
     }
 
-    public Map<String, Integer> getDailyMap() {
+    public Map<String, Set<Loot>> getDailyMap() {
         return this.dailyMap;
     }
 
