@@ -163,7 +163,9 @@ public class ProjectionServiceImpl implements ProjectionService {
         final var today = LocalDate.now();
         final var format = DateTimeFormatter.ofPattern("yyyy-MM-dd");
         final var loreDustReward = 10;
-        final var todayLoots = state.getDailyMap().getOrDefault(today.format(format), Set.of());
+
+        state.getDailyMap().computeIfAbsent(today.format(format), k -> new HashSet<>());
+        final var todayLoots = state.getDailyMap().get(today.format(format));
 
         if(todayLoots.isEmpty()) {
             this.addAction(state, actions, ActionType.DAILY, null);
